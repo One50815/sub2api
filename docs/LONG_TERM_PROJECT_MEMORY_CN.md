@@ -2,7 +2,7 @@
 
 > 状态：生效中  
 > 最后核对日期：2026-07-24
-> 基线：`main`，`d9811ce5`（版本 `0.1.164`；官方提交 `cb24522dd53f8f363d008e3afdc8e4baf9788cab`）
+> 基线：`main`，`e96dc50e`（版本 `0.1.164`；官方提交 `cb24522dd53f8f363d008e3afdc8e4baf9788cab`）
 > 决策：采用“方案一”，保留 Sub2API 的 Vue 业务实现，高保真、全站复刻独立 React 前端的视觉与交互  
 > 前端重做状态：已完成，进入长期维护与上游同步阶段  
 > 维护要求：每次改变架构、接口、合并策略或完成一个重做阶段时，同步更新本文档
@@ -249,7 +249,7 @@ git log -1 --oneline
 | ID | 功能 | 状态 | 后端入口 | 前端入口 | 迁移 | 上游重叠风险 |
 |---|---|---|---|---|---|---|
 | FORK-001 | 持久化工单中心与管理员工单管理 | 已发布 | `backend/internal/server/routes/user.go` 的 `/api/v1/tickets`；`backend/internal/server/routes/admin.go` 的 `/api/v1/admin/tickets` | `/tickets`、`/tickets/:id`、`/admin/tickets`、`/admin/tickets/:id`；系统设置 → 站点设置 → 侧边栏模块 | `backend/migrations/185_tickets.sql` | 上游若增加工单模块，重点核对状态机、逐管理员阅读位置、权限与设置键，禁止整目录覆盖 |
-| FORK-002 | 订阅权益快照与独立 Omnio Pro 体系 | 已发布 | `/api/v1/membership`、`/api/v1/admin/membership`、`/api/v1/groups/entitlements`；现有支付和统一计费服务的小型扩展点 | `/omnio-pro`（兼容 `/membership`）、`/purchase?tab=membership`、`/admin/omnio-pro`（兼容 `/admin/membership`）、后台分组管理 | `backend/migrations/186_membership_and_subscription_entitlements.sql`、`backend/migrations/187_omnio_pro_group_visibility.sql`、`backend/migrations/189_omnio_pro_group_settings.sql`、`backend/migrations/190_omnio_pro_free_quota.sql` | 上游若增加会员、套餐版本、订阅超额或自动续费功能，重点核对“人工用户倍率 > 分组独立 Pro 倍率 > 分组普通倍率”、Pro 专属分组权限、Pro 免费额度原子拆分、订单幂等、退款反向发放和计费缓存；禁止把 Pro 倍率写回分组普通倍率，禁止把独立 Pro 免费额度重新耦合到旧订阅 |
+| FORK-002 | 订阅权益快照与独立 Omnio Pro 体系 | 已发布 | `/api/v1/membership`、`/api/v1/admin/membership`、`/api/v1/groups/entitlements`；现有支付和统一计费服务的小型扩展点 | `/omnio-pro`（兼容 `/membership`）、`/purchase?tab=membership`、`/admin/omnio-pro`（兼容 `/admin/membership`）、后台分组管理 | `backend/migrations/186_membership_and_subscription_entitlements.sql`、`backend/migrations/187_omnio_pro_group_visibility.sql`、`backend/migrations/189_omnio_pro_group_settings.sql`、`backend/migrations/190_omnio_pro_free_quota.sql`、`backend/migrations/191_omnio_pro_level_benefits_and_quota.sql` | 上游若增加会员、套餐版本、订阅超额或自动续费功能，重点核对“人工用户倍率 > 等级与分组共同确定的 Pro 倍率 > 分组普通倍率”、按等级独立的 Pro 专属分组、每日额度、每月额度及用量计数、免费额度原子拆分、订单幂等、退款反向发放和计费缓存；禁止把 Pro 倍率写回分组普通倍率，禁止退回全局 Pro 配置，也禁止把独立 Pro 免费额度重新耦合到旧订阅 |
 | FORK-003 | Omnio Pro 统一商品并退役公开订阅 | 已完成 | 新订单仅允许 `balance`、`membership`；历史 subscription API、已支付订单履约和退款保留兼容 | `/omnio-pro` 为唯一会员入口；`/subscriptions`、`/admin/subscriptions` 自动跳转 Omnio Pro；购买页隐藏订阅标签 | `backend/migrations/188_omnio_pro_retire_subscriptions.sql` | 不删除历史订阅表和已支付权益；新建订阅订单返回 `SUBSCRIPTIONS_RETIRED`，所有新商品通过 Omnio Pro levels/offers/grants 管理；上游合并时优先保留该边界 |
 
 新增功能时填写实际路径，不要只写模块名称。状态使用：`设计中`、`开发中`、`已发布`、`已废弃`。
@@ -493,6 +493,7 @@ go test -tags=e2e -v -timeout=300s ./internal/integration/...
 | 2026-07-23 | `sub2api:custom-20260723-omnio-pro-quota` / `FORK-002-omnio-pro-free-quota` | 为每个分组增加独立的 Omnio Pro 每日/月度免费美元额度并部署生产；有效 Pro 用户请求先按最终 Pro 倍率计算费用，再在统一账务事务中原子拆分为免费额度与钱包扣费，按北京时间自然日和自然月重置；每日或月度任一上限用完后，超出部分自动扣钱包 | 生产迁移 190 已执行，新增额度配置、当前窗口聚合和不可变逐请求拆分事件；余额不足但仍有免费额度时允许请求，跨额度边界的单次请求按剩余额度与钱包精确拆分；后台分组编辑页配置额度，用户 `/omnio-pro` 页面展示今日和本月用量与剩余 |
 | 2026-07-23 | 官方 `0.1.164` / `cb24522dd53f8f363d008e3afdc8e4baf9788cab` | 从 Omnio 快照 `eb3087cc` 建立 `sync/upstream-20260723`，通过透明导入提交 `204c3bbd` 合并官方源码；吸收组合模型路由、分组 reasoning effort 策略、Ollama Cloud 用量、图片存储/鉴权缓存、支付宝移动端 deep link、运维移动端和可访问性修复 | 保留 Omnio Vue 视觉、Logo、首页、认证、导航、工单、Omnio Pro 及公开订阅退役边界；支付响应同时保留 `membership_offers` 与 `alipay_mobile_precreate_deep_link`，安装向导保留 Omnio 页面并加入 Redis ACL 用户名；新增迁移 `185_group_reasoning_effort_policy.sql`、`186_alipay_mobile_precreate_deep_link.sql`、`186_group_auth_cache_image_generation.sql`，与 Fork 既有同号迁移按完整文件名独立执行；本地验证已通过，Docker 镜像构建与生产发布等待可用服务器登录 |
 | 2026-07-24 | `sub2api:custom-20260724-0.1.164` / `d9811ce5` | 在生产服务器完成备份、服务器端 Docker 多阶段构建和应用容器滚动替换；仅重建 `sub2api`，未重启 PostgreSQL/Redis | 备份位于服务器 `/opt/sub2api/backups/20260723T164802Z-pre-0.1.164/`，包含数据库 dump、源码配置归档和旧镜像；四个新增迁移已执行，应用/数据库/Redis 均 healthy，内网和 `https://omni0.top/health` 均返回 `{"status":"ok"}`；生产源码同步到 `0.1.164`，旧镜像仍保留可回退 |
+| 2026-07-24 | `sub2api:custom-20260724-omnio-pro-levels` / `e96dc50e` | 完成 Omnio Pro 四档独立化并部署生产：`Omnio Pro`、`Omnio Pro Max`、`Omnio Pro Ultra`、`Omnio 内测` 的分组倍率、专属分组、每日免费额度、每月免费额度均按等级与分组分别保存；用量按 `(user_id, level_id, group_id)` 独立累计，调整任一档不再联动其他档 | 迁移 191 已执行，将旧全局配置和旧用量复制到现有四档，避免上线后权益或额度突变；运行时已切换到等级权益和等级用量表，旧表仅为旧镜像回退保留；备份位于 `/opt/sub2api/backups/20260723T182048Z-pre-omnio-pro-levels/`，仅替换 `sub2api`，PostgreSQL/Redis 未重启，旧镜像 `sub2api:custom-20260724-0.1.164` 仍可回退 |
 
 每次更新记录一行，内容应说明“为什么”，不能只写“更新文档”。当表格过长时，可按年度归档到 `docs/history/`，但保留最近一年和所有未完成决策。
 
@@ -524,6 +525,7 @@ go test -tags=e2e -v -timeout=300s ./internal/integration/...
 - 2026-07-23 Omnio Pro 免费额度门禁：后端受影响包定向编译通过，额度跨日/月边界原子拆分单测通过；前端 `pnpm run typecheck` 与一次 Vite 生产构建通过；未重复执行全量测试或视觉验收。
 - 2026-07-23 官方 `0.1.164` 同步门禁：`go generate ./ent`、`go generate ./cmd/server` 完成；`go test ./...` 全量通过；前端 `pnpm run lint:check`、`pnpm run typecheck`、`pnpm run test:run`（187 个测试文件、1288 个测试）和 `pnpm run build` 全量通过；`git diff --check` 通过且无冲突标记。当前 Windows 环境没有 Docker CLI，候选镜像须在生产服务器或 Docker 构建机上生成后再发布。
 - 2026-07-24 生产发布门禁：服务器 Docker 构建完成，镜像内 `vue-tsc`、Vite 和 Go embed 构建通过；新容器 `sub2api:custom-20260724-0.1.164` healthy，PostgreSQL/Redis 保持 healthy；`schema_migrations` 已登记 `172_composite_model_routes.sql`、`185_group_reasoning_effort_policy.sql`、`186_alipay_mobile_precreate_deep_link.sql`、`186_group_auth_cache_image_generation.sql`；内网、公网 `/health` 及关键用户/管理员/Omnio Pro/API 请求均成功。
+- 2026-07-24 Omnio Pro 四档独立化门禁：后端等级权益保存/删除定向测试与每日/月度额度跨窗口原子拆分 SQL mock 测试通过；前端 `pnpm run lint:check`、`pnpm run typecheck`、生产构建通过；`go test ./...` 首次仅在既有 `internal/service` 并发运行时用例抖动失败，单独重跑整个 `internal/service` 通过，未发现本次功能相关失败。生产镜像内前端和 Go 构建通过，容器 healthy；`schema_migrations` 已登记 `191_omnio_pro_level_benefits_and_quota.sql`，四档各有 4 条旧配置精确回填，等级用量/事件表已产生 12/7 条记录；PostgreSQL/Redis 保持原实例 healthy，内外网 `/health` 均返回 `{"status":"ok"}`，`/omnio-pro` 与 `/admin/omnio-pro` 均返回 200。
 
 ### 14.3 后续维护入口
 
