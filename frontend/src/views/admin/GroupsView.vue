@@ -597,10 +597,12 @@
           />
           <p class="input-hint">{{ t("admin.groups.rateMultiplierHint") }}</p>
         </div>
-        <div class="border-l-2 border-primary-400 pl-4 text-sm text-gray-600 dark:border-primary-500 dark:text-gray-300">
-          <p class="font-medium text-gray-900 dark:text-white">Omnio Pro 权益按等级独立配置</p>
-          <RouterLink to="/admin/omnio-pro" class="mt-1 inline-block font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400">前往 Omnio Pro 管理</RouterLink>
-        </div>
+        <GroupMembershipBenefitsEditor
+          v-model="createMembershipBenefits"
+          :levels="membershipLevels"
+          :base-rate-multiplier="createForm.rate_multiplier"
+          :loading="membershipCatalogLoading"
+        />
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
           <input
@@ -2121,10 +2123,12 @@
             data-tour="group-form-multiplier"
           />
         </div>
-        <div class="border-l-2 border-primary-400 pl-4 text-sm text-gray-600 dark:border-primary-500 dark:text-gray-300">
-          <p class="font-medium text-gray-900 dark:text-white">Omnio Pro 权益按等级独立配置</p>
-          <RouterLink to="/admin/omnio-pro" class="mt-1 inline-block font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400">前往 Omnio Pro 管理</RouterLink>
-        </div>
+        <GroupMembershipBenefitsEditor
+          v-model="editMembershipBenefits"
+          :levels="membershipLevels"
+          :base-rate-multiplier="editForm.rate_multiplier"
+          :loading="membershipCatalogLoading"
+        />
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
           <input
@@ -3976,6 +3980,7 @@ import { useI18n } from "vue-i18n";
 import { useAppStore } from "@/stores/app";
 import { useOnboardingStore } from "@/stores/onboarding";
 import { adminAPI } from "@/api/admin";
+import membershipAPI from "@/api/membership";
 import type {
   AdminGroup,
   CompositeModelRoute,
@@ -3986,6 +3991,7 @@ import type {
   GroupPlatform,
   SubscriptionType,
 } from "@/types";
+import type { MembershipLevel } from "@/types/membership";
 import type { Column } from "@/components/common/types";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import TablePageLayout from "@/components/layout/TablePageLayout.vue";
@@ -3999,6 +4005,7 @@ import PlatformIcon from "@/components/common/PlatformIcon.vue";
 import Icon from "@/components/icons/Icon.vue";
 import GroupRateMultipliersModal from "@/components/admin/group/GroupRateMultipliersModal.vue";
 import GroupRPMOverridesModal from "@/components/admin/group/GroupRPMOverridesModal.vue";
+import GroupMembershipBenefitsEditor from "@/components/admin/group/GroupMembershipBenefitsEditor.vue";
 import GroupCapacityBadge from "@/components/common/GroupCapacityBadge.vue";
 import ReasoningEffortPolicyFields from "@/components/admin/group/ReasoningEffortPolicyFields.vue";
 import { VueDraggable } from "vue-draggable-plus";
@@ -4039,6 +4046,14 @@ import {
   supportsVideoPricingPlatform,
   videoPricingI18nKey,
 } from "./groupsImagePricing";
+import {
+  buildGroupMembershipBenefitChangeSet,
+  cloneGroupMembershipBenefitDrafts,
+  groupMembershipBenefitDrafts,
+  validateGroupMembershipBenefitDrafts,
+  type GroupMembershipBenefitDraft,
+  type GroupMembershipBenefitValidationError,
+} from "./groupsMembershipBenefits";
 
 const { t } = useI18n();
 const appStore = useAppStore();
@@ -4452,6 +4467,13 @@ const rateMultipliersGroup = ref<AdminGroup | null>(null);
 const showRPMOverridesModal = ref(false);
 const rpmOverridesGroup = ref<AdminGroup | null>(null);
 const sortableGroups = ref<AdminGroup[]>([]);
+const membershipLevels = ref<MembershipLevel[]>([]);
+const membershipCatalogLoading = ref(false);
+const membershipCatalogLoaded = ref(false);
+const createMembershipBenefits = ref<GroupMembershipBenefitDraft[]>([]);
+const editMembershipBenefits = ref<GroupMembershipBenefitDraft[]>([]);
+const originalEditMembershipBenefits = ref<GroupMembershipBenefitDraft[]>([]);
+let membershipCatalogPromise: Promise<void> | null = null;
 type ConcreteGroupPlatform = Exclude<GroupPlatform, "composite">;
 type CompositeRouteFormState = {
   public_model: string;
@@ -5142,6 +5164,71 @@ const loadGroups = async () => {
   }
 };
 
+const loadMembershipCatalog = async (force = false): Promise<void> => {
+  if (membershipCatalogLoaded.value && !force) return;
+  if (membershipCatalogPromise) return membershipCatalogPromise;
+
+  membershipCatalogLoading.value = true;
+  membershipCatalogPromise = (async () => {
+    const response = await membershipAPI.adminCatalog();
+    membershipLevels.value = response.data.levels;
+    membershipCatalogLoaded.value = true;
+  })();
+
+  try {
+    await membershipCatalogPromise;
+  } catch (error) {
+    membershipLevels.value = [];
+    membershipCatalogLoaded.value = false;
+    throw error;
+  } finally {
+    membershipCatalogLoading.value = false;
+    membershipCatalogPromise = null;
+  }
+};
+
+const membershipBenefitValidationMessage = (
+  error: GroupMembershipBenefitValidationError,
+): string => {
+  if (error === "duplicate-level") return "同一会员等级只能添加一次";
+  if (error === "invalid-rate") return "会员优惠倍率必须大于或等于 0";
+  return "请选择有效的会员等级";
+};
+
+const validateMembershipBenefits = (
+  rows: GroupMembershipBenefitDraft[],
+): boolean => {
+  if (!membershipCatalogLoaded.value) return true;
+  const error = validateGroupMembershipBenefitDrafts(rows, membershipLevels.value);
+  if (!error) return true;
+  appStore.showError(membershipBenefitValidationMessage(error));
+  return false;
+};
+
+const syncGroupMembershipBenefits = async (
+  groupID: number,
+  originalRows: GroupMembershipBenefitDraft[],
+  currentRows: GroupMembershipBenefitDraft[],
+): Promise<void> => {
+  if (!membershipCatalogLoaded.value) return;
+  const changes = buildGroupMembershipBenefitChangeSet(
+    groupID,
+    originalRows,
+    currentRows,
+  );
+  await Promise.all(
+    changes.upserts.map((benefit) => membershipAPI.saveBenefit(benefit)),
+  );
+  await Promise.all(
+    changes.deletedLevelIds.map((levelID) =>
+      membershipAPI.deleteBenefit(levelID, groupID),
+    ),
+  );
+  if (changes.upserts.length || changes.deletedLevelIds.length) {
+    membershipCatalogLoaded.value = false;
+  }
+};
+
 const formatCost = (cost: number): string => {
   if (cost >= 1000) return cost.toFixed(0);
   if (cost >= 100) return cost.toFixed(1);
@@ -5253,8 +5340,13 @@ const handleSort = (key: string, order: 'asc' | 'desc') => {
 };
 
 const openCreateModal = () => {
+  createMembershipBenefits.value = [];
   showCreateModal.value = true;
   loadModelsListCandidates("create", 0, createForm.platform);
+  void loadMembershipCatalog().catch((error) => {
+    console.error("Error loading membership levels:", error);
+    appStore.showError("会员等级加载失败，分组其他设置仍可继续编辑");
+  });
 };
 
 const closeCreateModal = () => {
@@ -5303,6 +5395,7 @@ const closeCreateModal = () => {
   createForm.rpm_limit = 0;
   createForm.max_reasoning_effort = "";
   createForm.reasoning_effort_mappings = [];
+  createMembershipBenefits.value = [];
   createReasoningEffortPolicyRef.value?.resetValidation();
   resetModelsListState(createModelsListState);
   createModelRoutingRules.value = [];
@@ -5349,7 +5442,11 @@ const handleCreateGroup = async () => {
   ) {
     return;
   }
+  if (!validateMembershipBenefits(createMembershipBenefits.value)) {
+    return;
+  }
   submitting.value = true;
+  let createdGroup: AdminGroup | null = null;
   try {
     // 构建请求数据，包含模型路由配置
     const requestData = {
@@ -5420,7 +5517,12 @@ const handleCreateGroup = async () => {
     requestData.peak_rate_multiplier = normalizeRateMultiplier(
       createForm.peak_rate_multiplier,
     );
-    await adminAPI.groups.create(requestData);
+    createdGroup = await adminAPI.groups.create(requestData);
+    await syncGroupMembershipBenefits(
+      createdGroup.id,
+      [],
+      createMembershipBenefits.value,
+    );
     appStore.showSuccess(t("admin.groups.groupCreated"));
     closeCreateModal();
     loadGroups();
@@ -5430,9 +5532,15 @@ const handleCreateGroup = async () => {
     }
   } catch (error: any) {
     appStore.showError(
-      error.response?.data?.detail || t("admin.groups.failedToCreate"),
+      createdGroup
+        ? "分组已创建，但会员等级优惠保存失败，请在编辑分组中重试"
+        : error.response?.data?.detail || t("admin.groups.failedToCreate"),
     );
     console.error("Error creating group:", error);
+    if (createdGroup) {
+      closeCreateModal();
+      loadGroups();
+    }
     // Don't advance tour on error
   } finally {
     submitting.value = false;
@@ -5441,6 +5549,19 @@ const handleCreateGroup = async () => {
 
 const handleEdit = async (group: AdminGroup) => {
   editingGroup.value = group;
+  try {
+    await loadMembershipCatalog();
+    const benefits = groupMembershipBenefitDrafts(membershipLevels.value, group.id);
+    editMembershipBenefits.value =
+      cloneGroupMembershipBenefitDrafts(benefits);
+    originalEditMembershipBenefits.value =
+      cloneGroupMembershipBenefitDrafts(benefits);
+  } catch (error) {
+    editMembershipBenefits.value = [];
+    originalEditMembershipBenefits.value = [];
+    console.error("Error loading membership levels:", error);
+    appStore.showError("会员等级加载失败，分组其他设置仍可继续编辑");
+  }
   editForm.name = group.name;
   editForm.description = group.description || "";
   editForm.platform = group.platform;
@@ -5524,6 +5645,8 @@ const closeEditModal = () => {
   editingGroup.value = null;
   editForm.max_reasoning_effort = "";
   editForm.reasoning_effort_mappings = [];
+  editMembershipBenefits.value = [];
+  originalEditMembershipBenefits.value = [];
   editReasoningEffortPolicyRef.value?.resetValidation();
   editModelRoutingRules.value = [];
   editForm.copy_accounts_from_group_ids = [];
@@ -5554,8 +5677,12 @@ const handleUpdateGroup = async () => {
   ) {
     return;
   }
+  if (!validateMembershipBenefits(editMembershipBenefits.value)) {
+    return;
+  }
 
   submitting.value = true;
+  let groupUpdated = false;
   try {
     // 转换 fallback_group_id: null -> 0 (后端使用 0 表示清除)
     const payload = {
@@ -5635,12 +5762,20 @@ const handleUpdateGroup = async () => {
       editForm.peak_rate_multiplier,
     );
     await adminAPI.groups.update(editingGroup.value.id, payload);
+    groupUpdated = true;
+    await syncGroupMembershipBenefits(
+      editingGroup.value.id,
+      originalEditMembershipBenefits.value,
+      editMembershipBenefits.value,
+    );
     appStore.showSuccess(t("admin.groups.groupUpdated"));
     closeEditModal();
     loadGroups();
   } catch (error: any) {
     appStore.showError(
-      error.response?.data?.detail || t("admin.groups.failedToUpdate"),
+      groupUpdated
+        ? "分组基础设置已更新，但会员等级优惠保存失败，请重试"
+        : error.response?.data?.detail || t("admin.groups.failedToUpdate"),
     );
     console.error("Error updating group:", error);
   } finally {
