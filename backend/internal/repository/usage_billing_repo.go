@@ -252,22 +252,25 @@ func allocateOmnioProFreeQuota(
 		return allocation, nil
 	}
 
+	var levelID int64
 	var dailyLimit, monthlyLimit sql.NullFloat64
 	err := tx.QueryRowContext(ctx, `
-		SELECT s.daily_free_usd, s.monthly_free_usd
-		FROM omnio_pro_group_settings s
-		WHERE s.group_id = $2
-		  AND (COALESCE(s.daily_free_usd, 0) > 0 OR COALESCE(s.monthly_free_usd, 0) > 0)
-		  AND EXISTS (
-			SELECT 1
+		WITH effective_level AS (
+			SELECT ml.id
 			FROM user_membership_grants mg
-			JOIN membership_levels ml ON ml.id = mg.level_id AND ml.active = TRUE
+			JOIN membership_levels ml ON ml.id = mg.level_id
 			WHERE mg.user_id = $1 AND mg.status = 'active'
-			  AND mg.starts_at <= NOW() AND mg.expires_at > NOW()
-		  )`,
+			  AND mg.starts_at <= NOW() AND mg.expires_at > NOW() AND ml.active = TRUE
+			ORDER BY ml.rank DESC, mg.expires_at DESC, ml.id DESC
+			LIMIT 1
+		)
+		SELECT e.id, b.daily_free_usd, b.monthly_free_usd
+		FROM effective_level e
+		JOIN membership_level_group_benefits b ON b.level_id = e.id AND b.group_id = $2
+		WHERE COALESCE(b.daily_free_usd, 0) > 0 OR COALESCE(b.monthly_free_usd, 0) > 0`,
 		cmd.UserID,
 		cmd.GroupID,
-	).Scan(&dailyLimit, &monthlyLimit)
+	).Scan(&levelID, &dailyLimit, &monthlyLimit)
 	if errors.Is(err, sql.ErrNoRows) {
 		return allocation, nil
 	}
@@ -285,12 +288,13 @@ func allocateOmnioProFreeQuota(
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO omnio_pro_quota_usage (
-			user_id, group_id, daily_window_start, monthly_window_start
+		INSERT INTO omnio_pro_level_quota_usage (
+			user_id, level_id, group_id, daily_window_start, monthly_window_start
 		)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (user_id, group_id) DO NOTHING`,
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (user_id, level_id, group_id) DO NOTHING`,
 		cmd.UserID,
+		levelID,
 		cmd.GroupID,
 		currentDay,
 		currentMonth,
@@ -302,10 +306,11 @@ func allocateOmnioProFreeQuota(
 	var dailyUsed, monthlyUsed float64
 	if err := tx.QueryRowContext(ctx, `
 		SELECT daily_window_start, monthly_window_start, daily_used_usd, monthly_used_usd
-		FROM omnio_pro_quota_usage
-		WHERE user_id = $1 AND group_id = $2
+		FROM omnio_pro_level_quota_usage
+		WHERE user_id = $1 AND level_id = $2 AND group_id = $3
 		FOR UPDATE`,
 		cmd.UserID,
+		levelID,
 		cmd.GroupID,
 	).Scan(&storedDay, &storedMonth, &dailyUsed, &monthlyUsed); err != nil {
 		return allocation, err
@@ -344,14 +349,15 @@ func allocateOmnioProFreeQuota(
 	monthlyUsed += freeCost
 
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE omnio_pro_quota_usage
-		SET daily_window_start = $3,
-			monthly_window_start = $4,
-			daily_used_usd = $5,
-			monthly_used_usd = $6,
+		UPDATE omnio_pro_level_quota_usage
+		SET daily_window_start = $4,
+			monthly_window_start = $5,
+			daily_used_usd = $6,
+			monthly_used_usd = $7,
 			updated_at = NOW()
-		WHERE user_id = $1 AND group_id = $2`,
+		WHERE user_id = $1 AND level_id = $2 AND group_id = $3`,
 		cmd.UserID,
+		levelID,
 		cmd.GroupID,
 		currentDay,
 		currentMonth,
@@ -362,14 +368,15 @@ func allocateOmnioProFreeQuota(
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO omnio_pro_quota_events (
-			request_id, api_key_id, user_id, group_id,
+		INSERT INTO omnio_pro_level_quota_events (
+			request_id, api_key_id, user_id, level_id, group_id,
 			total_cost_usd, free_cost_usd, wallet_cost_usd
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		cmd.RequestID,
 		cmd.APIKeyID,
 		cmd.UserID,
+		levelID,
 		cmd.GroupID,
 		cmd.BalanceCost,
 		freeCost,

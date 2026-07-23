@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { MembershipAuditLog, MembershipCatalog, MembershipLevel, MembershipOffer, MembershipSummary, MembershipGroupBenefit, MembershipGrant, MembershipPlanBenefit, OmnioProGroupSetting } from '@/types/membership'
+import type { MembershipAuditLog, MembershipCatalog, MembershipLevel, MembershipOffer, MembershipSummary, MembershipGroupBenefit, MembershipGrant, MembershipPlanBenefit } from '@/types/membership'
 
 export const membershipAPI = {
   getSummary() {
@@ -13,12 +13,6 @@ export const membershipAPI = {
   },
   adminCatalog() {
     return apiClient.get<MembershipCatalog>('/admin/membership/catalog')
-  },
-  getGroupSetting(groupId: number) {
-    return apiClient.get<OmnioProGroupSetting>(`/admin/membership/group-settings/${groupId}`)
-  },
-  saveGroupSetting(groupId: number, setting: Pick<OmnioProGroupSetting, 'rate_multiplier' | 'pro_only' | 'daily_free_usd' | 'monthly_free_usd'>) {
-    return apiClient.put<OmnioProGroupSetting>(`/admin/membership/group-settings/${groupId}`, setting)
   },
   saveLevel(level: Partial<MembershipLevel> & { id?: number }) {
     return level.id ? apiClient.put<MembershipLevel>(`/admin/membership/levels/${level.id}`, level) : apiClient.post<MembershipLevel>('/admin/membership/levels', level)

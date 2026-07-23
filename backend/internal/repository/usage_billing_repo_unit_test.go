@@ -112,27 +112,27 @@ func TestAllocateOmnioProFreeQuota_SplitsAtDailyAndMonthlyBoundary(t *testing.T)
 	mock.ExpectBegin()
 	tx, err := db.BeginTx(ctx, nil)
 	require.NoError(t, err)
-	mock.ExpectQuery(`(?s)SELECT s\.daily_free_usd, s\.monthly_free_usd.*FROM omnio_pro_group_settings`).
+	mock.ExpectQuery(`(?s)SELECT e\.id, b\.daily_free_usd, b\.monthly_free_usd.*FROM effective_level e`).
 		WithArgs(int64(7), int64(9)).
-		WillReturnRows(sqlmock.NewRows([]string{"daily_free_usd", "monthly_free_usd"}).AddRow(10.0, 100.0))
+		WillReturnRows(sqlmock.NewRows([]string{"level_id", "daily_free_usd", "monthly_free_usd"}).AddRow(int64(4), 10.0, 100.0))
 	mock.ExpectQuery(`(?s)SELECT.*CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai'`).
 		WillReturnRows(sqlmock.NewRows([]string{"day_start", "month_start"}).AddRow(currentDay, currentMonth))
-	mock.ExpectExec(`(?s)INSERT INTO omnio_pro_quota_usage`).
-		WithArgs(int64(7), int64(9), currentDay, currentMonth).
+	mock.ExpectExec(`(?s)INSERT INTO omnio_pro_level_quota_usage`).
+		WithArgs(int64(7), int64(4), int64(9), currentDay, currentMonth).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectQuery(`(?s)SELECT daily_window_start, monthly_window_start, daily_used_usd, monthly_used_usd.*FOR UPDATE`).
-		WithArgs(int64(7), int64(9)).
+		WithArgs(int64(7), int64(4), int64(9)).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"daily_window_start",
 			"monthly_window_start",
 			"daily_used_usd",
 			"monthly_used_usd",
 		}).AddRow(currentDay, currentMonth, 8.0, 98.0))
-	mock.ExpectExec(`(?s)UPDATE omnio_pro_quota_usage`).
-		WithArgs(int64(7), int64(9), currentDay, currentMonth, 10.0, 100.0).
+	mock.ExpectExec(`(?s)UPDATE omnio_pro_level_quota_usage`).
+		WithArgs(int64(7), int64(4), int64(9), currentDay, currentMonth, 10.0, 100.0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec(`(?s)INSERT INTO omnio_pro_quota_events`).
-		WithArgs("req-pro-quota", int64(11), int64(7), int64(9), 5.0, 2.0, 3.0).
+	mock.ExpectExec(`(?s)INSERT INTO omnio_pro_level_quota_events`).
+		WithArgs("req-pro-quota", int64(11), int64(7), int64(4), int64(9), 5.0, 2.0, 3.0).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 

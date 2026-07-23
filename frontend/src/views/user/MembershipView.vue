@@ -59,11 +59,11 @@
         <div class="grid gap-4 md:grid-cols-2">
           <article
             v-for="quota in summary.quota_progress"
-            :key="quota.group_id"
+            :key="`${quota.level_id}:${quota.group_id}`"
             class="rounded-xl border border-gray-200 bg-white p-5 dark:border-dark-700 dark:bg-dark-900"
           >
             <div class="flex items-center justify-between gap-3">
-              <h3 class="font-semibold text-gray-950 dark:text-white">{{ quota.group_name }}</h3>
+              <div><h3 class="font-semibold text-gray-950 dark:text-white">{{ quota.group_name }}</h3><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ quota.level_name }}</p></div>
               <span class="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/40 dark:text-primary-300">超额扣钱包</span>
             </div>
             <div class="mt-5 space-y-4">

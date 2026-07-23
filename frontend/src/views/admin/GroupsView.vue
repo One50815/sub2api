@@ -597,64 +597,9 @@
           />
           <p class="input-hint">{{ t("admin.groups.rateMultiplierHint") }}</p>
         </div>
-        <div class="rounded-lg border border-primary-200 bg-primary-50/50 p-4 dark:border-primary-900/50 dark:bg-primary-950/20">
-          <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ t("admin.groups.form.omnioProSettings") }}</p>
-          <div class="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProRateMultiplier") }}</label>
-              <input
-                v-model.number="createForm.omnio_pro_rate_multiplier"
-                type="number"
-                step="0.001"
-                min="0"
-                class="input"
-                :placeholder="t('admin.groups.form.omnioProRatePlaceholder')"
-              />
-              <p class="input-hint">{{ t("admin.groups.form.omnioProRateHint") }}</p>
-            </div>
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProOnly") }}</label>
-              <div class="flex h-10 items-center gap-3">
-                <button
-                  type="button"
-                  @click="createForm.omnio_pro_only = !createForm.omnio_pro_only"
-                  :class="[
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    createForm.omnio_pro_only ? 'bg-primary-500' : 'bg-gray-300 dark:bg-dark-600',
-                  ]"
-                >
-                  <span :class="['inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', createForm.omnio_pro_only ? 'translate-x-6' : 'translate-x-1']" />
-                </button>
-                <span class="text-sm text-gray-500 dark:text-gray-400">{{ createForm.omnio_pro_only ? t("common.enabled") : t("common.disabled") }}</span>
-              </div>
-              <p class="input-hint">{{ t("admin.groups.form.omnioProOnlyHint") }}</p>
-            </div>
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProDailyFree") }}</label>
-              <input
-                v-model.number="createForm.omnio_pro_daily_free_usd"
-                type="number"
-                step="0.01"
-                min="0"
-                class="input"
-                placeholder="10"
-              />
-              <p class="input-hint">{{ t("admin.groups.form.omnioProDailyFreeHint") }}</p>
-            </div>
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProMonthlyFree") }}</label>
-              <input
-                v-model.number="createForm.omnio_pro_monthly_free_usd"
-                type="number"
-                step="0.01"
-                min="0"
-                class="input"
-                placeholder="100"
-              />
-              <p class="input-hint">{{ t("admin.groups.form.omnioProMonthlyFreeHint") }}</p>
-            </div>
-          </div>
-          <p class="mt-3 text-xs font-medium text-primary-700 dark:text-primary-300">{{ t("admin.groups.form.omnioProQuotaWalletHint") }}</p>
+        <div class="border-l-2 border-primary-400 pl-4 text-sm text-gray-600 dark:border-primary-500 dark:text-gray-300">
+          <p class="font-medium text-gray-900 dark:text-white">Omnio Pro 权益按等级独立配置</p>
+          <RouterLink to="/admin/omnio-pro" class="mt-1 inline-block font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400">前往 Omnio Pro 管理</RouterLink>
         </div>
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
@@ -2176,64 +2121,9 @@
             data-tour="group-form-multiplier"
           />
         </div>
-        <div class="rounded-lg border border-primary-200 bg-primary-50/50 p-4 dark:border-primary-900/50 dark:bg-primary-950/20">
-          <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ t("admin.groups.form.omnioProSettings") }}</p>
-          <div class="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProRateMultiplier") }}</label>
-              <input
-                v-model.number="editForm.omnio_pro_rate_multiplier"
-                type="number"
-                step="0.001"
-                min="0"
-                class="input"
-                :placeholder="t('admin.groups.form.omnioProRatePlaceholder')"
-              />
-              <p class="input-hint">{{ t("admin.groups.form.omnioProRateHint") }}</p>
-            </div>
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProOnly") }}</label>
-              <div class="flex h-10 items-center gap-3">
-                <button
-                  type="button"
-                  @click="editForm.omnio_pro_only = !editForm.omnio_pro_only"
-                  :class="[
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    editForm.omnio_pro_only ? 'bg-primary-500' : 'bg-gray-300 dark:bg-dark-600',
-                  ]"
-                >
-                  <span :class="['inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', editForm.omnio_pro_only ? 'translate-x-6' : 'translate-x-1']" />
-                </button>
-                <span class="text-sm text-gray-500 dark:text-gray-400">{{ editForm.omnio_pro_only ? t("common.enabled") : t("common.disabled") }}</span>
-              </div>
-              <p class="input-hint">{{ t("admin.groups.form.omnioProOnlyHint") }}</p>
-            </div>
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProDailyFree") }}</label>
-              <input
-                v-model.number="editForm.omnio_pro_daily_free_usd"
-                type="number"
-                step="0.01"
-                min="0"
-                class="input"
-                placeholder="10"
-              />
-              <p class="input-hint">{{ t("admin.groups.form.omnioProDailyFreeHint") }}</p>
-            </div>
-            <div>
-              <label class="input-label">{{ t("admin.groups.form.omnioProMonthlyFree") }}</label>
-              <input
-                v-model.number="editForm.omnio_pro_monthly_free_usd"
-                type="number"
-                step="0.01"
-                min="0"
-                class="input"
-                placeholder="100"
-              />
-              <p class="input-hint">{{ t("admin.groups.form.omnioProMonthlyFreeHint") }}</p>
-            </div>
-          </div>
-          <p class="mt-3 text-xs font-medium text-primary-700 dark:text-primary-300">{{ t("admin.groups.form.omnioProQuotaWalletHint") }}</p>
+        <div class="border-l-2 border-primary-400 pl-4 text-sm text-gray-600 dark:border-primary-500 dark:text-gray-300">
+          <p class="font-medium text-gray-900 dark:text-white">Omnio Pro 权益按等级独立配置</p>
+          <RouterLink to="/admin/omnio-pro" class="mt-1 inline-block font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400">前往 Omnio Pro 管理</RouterLink>
         </div>
         <div>
           <label class="input-label">{{ t("admin.groups.form.rpmLimit") }}</label>
@@ -4086,7 +3976,6 @@ import { useI18n } from "vue-i18n";
 import { useAppStore } from "@/stores/app";
 import { useOnboardingStore } from "@/stores/onboarding";
 import { adminAPI } from "@/api/admin";
-import { membershipAPI } from "@/api/membership";
 import type {
   AdminGroup,
   CompositeModelRoute,
@@ -4097,7 +3986,6 @@ import type {
   GroupPlatform,
   SubscriptionType,
 } from "@/types";
-import type { OmnioProGroupSetting } from "@/types/membership";
 import type { Column } from "@/components/common/types";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import TablePageLayout from "@/components/layout/TablePageLayout.vue";
@@ -4621,10 +4509,6 @@ const createForm = reactive({
   description: "",
   platform: "anthropic" as GroupPlatform,
   rate_multiplier: 1.0,
-  omnio_pro_rate_multiplier: null as number | string | null,
-  omnio_pro_only: false,
-  omnio_pro_daily_free_usd: null as number | string | null,
-  omnio_pro_monthly_free_usd: null as number | string | null,
   is_exclusive: false,
   subscription_type: "standard" as SubscriptionType,
   daily_limit_usd: null as number | null,
@@ -4973,10 +4857,6 @@ const editForm = reactive({
   description: "",
   platform: "anthropic" as GroupPlatform,
   rate_multiplier: 1.0,
-  omnio_pro_rate_multiplier: null as number | string | null,
-  omnio_pro_only: false,
-  omnio_pro_daily_free_usd: null as number | string | null,
-  omnio_pro_monthly_free_usd: null as number | string | null,
   is_exclusive: false,
   status: "active" as "active" | "inactive",
   subscription_type: "standard" as SubscriptionType,
@@ -5387,10 +5267,6 @@ const closeCreateModal = () => {
   createForm.description = "";
   createForm.platform = "anthropic";
   createForm.rate_multiplier = 1.0;
-  createForm.omnio_pro_rate_multiplier = null;
-  createForm.omnio_pro_only = false;
-  createForm.omnio_pro_daily_free_usd = null;
-  createForm.omnio_pro_monthly_free_usd = null;
   createForm.is_exclusive = false;
   createForm.subscription_type = "standard";
   createForm.daily_limit_usd = null;
@@ -5459,14 +5335,6 @@ const normalizeRateMultiplier = (
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
-};
-
-const normalizeOmnioProRateMultiplier = (
-  value: number | string | null,
-): number | null => {
-  if (value === null || value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
 
 const handleCreateGroup = async () => {
@@ -5552,26 +5420,7 @@ const handleCreateGroup = async () => {
     requestData.peak_rate_multiplier = normalizeRateMultiplier(
       createForm.peak_rate_multiplier,
     );
-    const {
-      omnio_pro_rate_multiplier: _omnioProRate,
-      omnio_pro_only: _omnioProOnly,
-      omnio_pro_daily_free_usd: _omnioProDailyFree,
-      omnio_pro_monthly_free_usd: _omnioProMonthlyFree,
-      ...groupRequestData
-    } = requestData;
-    const createdGroup = await adminAPI.groups.create(groupRequestData);
-    await membershipAPI.saveGroupSetting(createdGroup.id, {
-      rate_multiplier: normalizeOmnioProRateMultiplier(
-        createForm.omnio_pro_rate_multiplier,
-      ),
-      pro_only: createForm.omnio_pro_only,
-      daily_free_usd: normalizeOptionalLimit(
-        createForm.omnio_pro_daily_free_usd,
-      ),
-      monthly_free_usd: normalizeOptionalLimit(
-        createForm.omnio_pro_monthly_free_usd,
-      ),
-    });
+    await adminAPI.groups.create(requestData);
     appStore.showSuccess(t("admin.groups.groupCreated"));
     closeCreateModal();
     loadGroups();
@@ -5591,28 +5440,11 @@ const handleCreateGroup = async () => {
 };
 
 const handleEdit = async (group: AdminGroup) => {
-  let proSetting: OmnioProGroupSetting;
-  try {
-    const response = await membershipAPI.getGroupSetting(group.id);
-    proSetting = response.data;
-  } catch (error) {
-    appStore.showError(
-      extractApiErrorMessage(
-        error,
-        t("admin.groups.failedToLoadOmnioProSettings"),
-      ),
-    );
-    return;
-  }
   editingGroup.value = group;
   editForm.name = group.name;
   editForm.description = group.description || "";
   editForm.platform = group.platform;
   editForm.rate_multiplier = group.rate_multiplier;
-  editForm.omnio_pro_rate_multiplier = proSetting.rate_multiplier ?? null;
-  editForm.omnio_pro_only = proSetting.pro_only;
-  editForm.omnio_pro_daily_free_usd = proSetting.daily_free_usd ?? null;
-  editForm.omnio_pro_monthly_free_usd = proSetting.monthly_free_usd ?? null;
   editForm.is_exclusive = group.is_exclusive;
   editForm.status = group.status;
   editForm.subscription_type = group.subscription_type || "standard";
@@ -5695,10 +5527,6 @@ const closeEditModal = () => {
   editReasoningEffortPolicyRef.value?.resetValidation();
   editModelRoutingRules.value = [];
   editForm.copy_accounts_from_group_ids = [];
-  editForm.omnio_pro_rate_multiplier = null;
-  editForm.omnio_pro_only = false;
-  editForm.omnio_pro_daily_free_usd = null;
-  editForm.omnio_pro_monthly_free_usd = null;
   editForm.peak_rate_enabled = false;
   editForm.peak_start = "";
   editForm.peak_end = "";
@@ -5806,26 +5634,7 @@ const handleUpdateGroup = async () => {
     payload.peak_rate_multiplier = normalizeRateMultiplier(
       editForm.peak_rate_multiplier,
     );
-    const {
-      omnio_pro_rate_multiplier: _omnioProRate,
-      omnio_pro_only: _omnioProOnly,
-      omnio_pro_daily_free_usd: _omnioProDailyFree,
-      omnio_pro_monthly_free_usd: _omnioProMonthlyFree,
-      ...groupPayload
-    } = payload;
-    await adminAPI.groups.update(editingGroup.value.id, groupPayload);
-    await membershipAPI.saveGroupSetting(editingGroup.value.id, {
-      rate_multiplier: normalizeOmnioProRateMultiplier(
-        editForm.omnio_pro_rate_multiplier,
-      ),
-      pro_only: editForm.omnio_pro_only,
-      daily_free_usd: normalizeOptionalLimit(
-        editForm.omnio_pro_daily_free_usd,
-      ),
-      monthly_free_usd: normalizeOptionalLimit(
-        editForm.omnio_pro_monthly_free_usd,
-      ),
-    });
+    await adminAPI.groups.update(editingGroup.value.id, payload);
     appStore.showSuccess(t("admin.groups.groupUpdated"));
     closeEditModal();
     loadGroups();

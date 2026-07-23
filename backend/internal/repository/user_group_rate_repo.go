@@ -160,11 +160,10 @@ func (r *userGroupRateRepository) GetByUserAndGroup(ctx context.Context, userID,
 			ORDER BY ml.rank DESC, mg.expires_at DESC, ml.id DESC
 			LIMIT 1
 		)
-		SELECT CASE WHEN s.group_id IS NOT NULL THEN s.rate_multiplier ELSE b.rate_multiplier END
+		SELECT b.rate_multiplier
 		FROM effective_level e
-		LEFT JOIN omnio_pro_group_settings s ON s.group_id=$2
-		LEFT JOIN membership_level_group_benefits b ON b.level_id=e.id AND b.group_id=$2
-		WHERE CASE WHEN s.group_id IS NOT NULL THEN s.rate_multiplier ELSE b.rate_multiplier END IS NOT NULL`
+		JOIN membership_level_group_benefits b ON b.level_id=e.id AND b.group_id=$2
+		WHERE b.rate_multiplier IS NOT NULL`
 	rate = sql.NullFloat64{}
 	err = scanSingleRow(ctx, r.sql, query, []any{userID, groupID}, &rate)
 	if err == sql.ErrNoRows || !rate.Valid {

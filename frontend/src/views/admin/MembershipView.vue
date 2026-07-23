@@ -38,6 +38,8 @@
                   <template v-if="benefit.pro_only"> · Pro 专属</template>
                   <template v-if="benefit.rate_multiplier != null"> · {{ benefit.rate_multiplier }}x</template>
                   <template v-if="benefit.rpm_limit != null"> · {{ benefit.rpm_limit }} RPM</template>
+                  <template v-if="benefit.daily_free_usd != null"> · 日 {{ benefit.daily_free_usd }} USD</template>
+                  <template v-if="benefit.monthly_free_usd != null"> · 月 {{ benefit.monthly_free_usd }} USD</template>
                 </button>
               </div>
             </article>
@@ -114,7 +116,8 @@
           </div>
           <div v-else-if="dialogType === 'benefit'" class="grid gap-4 sm:grid-cols-2">
             <label class="field"><span>Pro 等级</span><select v-model.number="benefitForm.level_id" class="input" required><option v-for="level in catalog.levels" :key="level.id" :value="level.id">{{ level.name }}</option></select></label><label class="field"><span>分组 ID</span><input v-model.number="benefitForm.group_id" type="number" min="1" class="input" required /></label>
-            <label class="field"><span>Pro 最终倍率（留空使用分组基础倍率）</span><input v-model.number="benefitForm.rate_multiplier" type="number" min="0" step="0.01" class="input" /><small>只覆盖该 Pro 等级用户的最终倍率，不修改分组全局倍率。</small></label><label class="field"><span>RPM 上限（留空不覆盖）</span><input v-model.number="benefitForm.rpm_limit" type="number" min="0" class="input" /></label>
+            <label class="field"><span>Pro 最终倍率（留空使用分组基础倍率）</span><input v-model.number="benefitForm.rate_multiplier" type="number" min="0" step="0.01" class="input" /><small>只覆盖该 Pro 等级用户的最终倍率。</small></label><label class="field"><span>RPM 上限（留空不覆盖）</span><input v-model.number="benefitForm.rpm_limit" type="number" min="0" class="input" /></label>
+            <label class="field"><span>每日免费额度（USD）</span><input v-model.number="benefitForm.daily_free_usd" type="number" min="0" step="0.01" class="input" /><small>按当前自然日、当前等级和分组独立统计。</small></label><label class="field"><span>每月免费额度（USD）</span><input v-model.number="benefitForm.monthly_free_usd" type="number" min="0" step="0.01" class="input" /><small>按当前自然月、当前等级和分组独立统计。</small></label>
             <label class="flex items-center gap-2 text-sm sm:col-span-2"><input v-model="benefitForm.allow_access" type="checkbox" />允许该等级访问此分组</label>
             <label class="flex items-center gap-2 text-sm sm:col-span-2"><input v-model="benefitForm.pro_only" type="checkbox" @change="onProOnlyChange" />仅 Omnio Pro 可见和绑定</label>
             <button v-if="benefitEditing" type="button" class="btn btn-danger sm:col-span-2" @click="removeBenefit">删除该分组权益</button>
@@ -149,7 +152,7 @@ const catalog = reactive<MembershipCatalog>({ levels: [], offers: [], plan_benef
 const auditLogs = ref<MembershipAuditLog[]>([])
 const levelForm = reactive<Partial<MembershipLevel>>({ name: '', slug: '', description: '', rank: 0, badge_color: '#2563eb', concurrency_bonus: 0, priority_support: false, active: true, sort_order: 0 })
 const offerForm = reactive<Partial<MembershipOffer>>({ level_id: 0, name: '', description: '', price: 0, original_price: null, currency: 'USD', duration_days: 30, for_sale: true, sort_order: 0 })
-const benefitForm = reactive<{ level_id: number; group_id: number; allow_access: boolean; pro_only: boolean; rate_multiplier: number | null; rpm_limit: number | null }>({ level_id: 0, group_id: 0, allow_access: true, pro_only: false, rate_multiplier: null, rpm_limit: null })
+const benefitForm = reactive<{ level_id: number; group_id: number; allow_access: boolean; pro_only: boolean; rate_multiplier: number | null; rpm_limit: number | null; daily_free_usd: number | null; monthly_free_usd: number | null }>({ level_id: 0, group_id: 0, allow_access: true, pro_only: false, rate_multiplier: null, rpm_limit: null, daily_free_usd: null, monthly_free_usd: null })
 const planBenefitForm = reactive<MembershipPlanBenefit>({ plan_id: 0, plan_name: '', level_id: 0, level_name: '', duration_days: null })
 const grantForm = reactive({ user_id: 0, level_id: 0, days: 30, notes: '' })
 
@@ -182,7 +185,7 @@ function newLevel() { Object.assign(levelForm, { id: undefined, name: '', slug: 
 function editLevel(level: MembershipLevel) { Object.assign(levelForm, level); dialogType.value = 'level'; dialogOpen.value = true }
 function newOffer() { Object.assign(offerForm, { id: undefined, level_id: catalog.levels[0]?.id || 0, name: '', description: '', price: 0, original_price: null, currency: 'USD', duration_days: 30, for_sale: true, sort_order: 0 }); dialogType.value = 'offer'; dialogOpen.value = true }
 function editOffer(offer: MembershipOffer) { Object.assign(offerForm, offer); dialogType.value = 'offer'; dialogOpen.value = true }
-function newBenefit(levelId: number) { Object.assign(benefitForm, { level_id: levelId, group_id: 0, allow_access: true, pro_only: false, rate_multiplier: null, rpm_limit: null }); benefitEditing.value = false; dialogType.value = 'benefit'; dialogOpen.value = true }
+function newBenefit(levelId: number) { Object.assign(benefitForm, { level_id: levelId, group_id: 0, allow_access: true, pro_only: false, rate_multiplier: null, rpm_limit: null, daily_free_usd: null, monthly_free_usd: null }); benefitEditing.value = false; dialogType.value = 'benefit'; dialogOpen.value = true }
 function editBenefit(benefit: MembershipGroupBenefit) { Object.assign(benefitForm, benefit); benefitEditing.value = true; dialogType.value = 'benefit'; dialogOpen.value = true }
 function newPlanBenefit() { Object.assign(planBenefitForm, { plan_id: 0, plan_name: '', level_id: catalog.levels[0]?.id || 0, level_name: '', duration_days: null }); dialogType.value = 'plan'; dialogOpen.value = true }
 function editPlanBenefit(item: MembershipPlanBenefit) { Object.assign(planBenefitForm, item); dialogType.value = 'plan'; dialogOpen.value = true }

@@ -50,11 +50,12 @@ type MembershipGroupBenefit struct {
 	ProOnly        bool     `json:"pro_only"`
 	RateMultiplier *float64 `json:"rate_multiplier"`
 	RPMLimit       *int     `json:"rpm_limit"`
+	DailyFreeUSD   *float64 `json:"daily_free_usd"`
+	MonthlyFreeUSD *float64 `json:"monthly_free_usd"`
 }
 
-// OmnioProGroupSetting is the single group-scoped source of truth for Pro
-// pricing and visibility. Membership levels only decide whether the user has
-// an active Omnio Pro grant.
+// OmnioProGroupSetting is retained for the legacy group-settings admin API.
+// New management surfaces use MembershipGroupBenefit as the source of truth.
 type OmnioProGroupSetting struct {
 	GroupID        int64    `json:"group_id"`
 	RateMultiplier *float64 `json:"rate_multiplier"`
@@ -64,6 +65,8 @@ type OmnioProGroupSetting struct {
 }
 
 type OmnioProQuotaProgress struct {
+	LevelID             int64   `json:"level_id"`
+	LevelName           string  `json:"level_name"`
 	GroupID             int64   `json:"group_id"`
 	GroupName           string  `json:"group_name"`
 	DailyLimitUSD       float64 `json:"daily_limit_usd"`
@@ -273,28 +276,31 @@ func (s *MembershipService) GetSummary(ctx context.Context, userID int64) (*Memb
 
 func (s *MembershipService) ListOmnioProQuotaProgress(ctx context.Context, userID int64) ([]OmnioProQuotaProgress, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		WITH period AS (
+		WITH effective_level AS (
+			SELECT ml.id, ml.name
+			FROM user_membership_grants mg
+			JOIN membership_levels ml ON ml.id = mg.level_id
+			WHERE mg.user_id = $1 AND mg.status = 'active'
+			  AND mg.starts_at <= NOW() AND mg.expires_at > NOW() AND ml.active = TRUE
+			ORDER BY ml.rank DESC, mg.expires_at DESC, ml.id DESC
+			LIMIT 1
+		), period AS (
 			SELECT
 				(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE AS day_start,
 				date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE AS month_start
 		)
-		SELECT s.group_id, g.name,
-		       COALESCE(s.daily_free_usd, 0),
+		SELECT e.id, e.name, b.group_id, g.name,
+		       COALESCE(b.daily_free_usd, 0),
 		       CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END,
-		       COALESCE(s.monthly_free_usd, 0),
+		       COALESCE(b.monthly_free_usd, 0),
 		       CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END
-		FROM omnio_pro_group_settings s
-		JOIN groups g ON g.id = s.group_id AND g.deleted_at IS NULL
+		FROM effective_level e
+		JOIN membership_level_group_benefits b ON b.level_id = e.id
+		JOIN groups g ON g.id = b.group_id AND g.deleted_at IS NULL
 		CROSS JOIN period p
-		LEFT JOIN omnio_pro_quota_usage u ON u.user_id = $1 AND u.group_id = s.group_id
-		WHERE (COALESCE(s.daily_free_usd, 0) > 0 OR COALESCE(s.monthly_free_usd, 0) > 0)
-		  AND EXISTS (
-			SELECT 1
-			FROM user_membership_grants mg
-			JOIN membership_levels ml ON ml.id = mg.level_id AND ml.active = TRUE
-			WHERE mg.user_id = $1 AND mg.status = 'active'
-			  AND mg.starts_at <= NOW() AND mg.expires_at > NOW()
-		  )
+		LEFT JOIN omnio_pro_level_quota_usage u
+		  ON u.user_id = $1 AND u.level_id = e.id AND u.group_id = b.group_id
+		WHERE (COALESCE(b.daily_free_usd, 0) > 0 OR COALESCE(b.monthly_free_usd, 0) > 0)
 		ORDER BY g.sort_order, g.id`, userID)
 	if err != nil {
 		return nil, err
@@ -305,6 +311,8 @@ func (s *MembershipService) ListOmnioProQuotaProgress(ctx context.Context, userI
 	for rows.Next() {
 		var item OmnioProQuotaProgress
 		if err := rows.Scan(
+			&item.LevelID,
+			&item.LevelName,
 			&item.GroupID,
 			&item.GroupName,
 			&item.DailyLimitUSD,
@@ -337,35 +345,38 @@ func (s *MembershipService) HasAvailableOmnioProQuota(ctx context.Context, userI
 	}
 	var available bool
 	err := s.db.QueryRowContext(ctx, `
-		WITH period AS (
+		WITH effective_level AS (
+			SELECT ml.id
+			FROM user_membership_grants mg
+			JOIN membership_levels ml ON ml.id = mg.level_id
+			WHERE mg.user_id = $1 AND mg.status = 'active'
+			  AND mg.starts_at <= NOW() AND mg.expires_at > NOW() AND ml.active = TRUE
+			ORDER BY ml.rank DESC, mg.expires_at DESC, ml.id DESC
+			LIMIT 1
+		), period AS (
 			SELECT
 				(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE AS day_start,
 				date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE AS month_start
 		)
 		SELECT EXISTS (
 			SELECT 1
-			FROM omnio_pro_group_settings s
+			FROM effective_level e
+			JOIN membership_level_group_benefits b ON b.level_id = e.id
 			CROSS JOIN period p
-			LEFT JOIN omnio_pro_quota_usage u ON u.user_id = $1 AND u.group_id = s.group_id
-			WHERE s.group_id = $2
+			LEFT JOIN omnio_pro_level_quota_usage u
+			  ON u.user_id = $1 AND u.level_id = e.id AND u.group_id = b.group_id
+			WHERE b.group_id = $2
 			  AND (
-				(COALESCE(s.daily_free_usd, 0) > 0 AND
-				 CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < s.daily_free_usd)
+				(COALESCE(b.daily_free_usd, 0) > 0 AND
+				 CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < b.daily_free_usd)
 				OR
-				(COALESCE(s.monthly_free_usd, 0) > 0 AND
-				 CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < s.monthly_free_usd)
+				(COALESCE(b.monthly_free_usd, 0) > 0 AND
+				 CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < b.monthly_free_usd)
 			  )
-			  AND (COALESCE(s.daily_free_usd, 0) <= 0 OR
-				   CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < s.daily_free_usd)
-			  AND (COALESCE(s.monthly_free_usd, 0) <= 0 OR
-				   CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < s.monthly_free_usd)
-			  AND EXISTS (
-				SELECT 1
-				FROM user_membership_grants mg
-				JOIN membership_levels ml ON ml.id = mg.level_id AND ml.active = TRUE
-				WHERE mg.user_id = $1 AND mg.status = 'active'
-				  AND mg.starts_at <= NOW() AND mg.expires_at > NOW()
-			  )
+			  AND (COALESCE(b.daily_free_usd, 0) <= 0 OR
+				   CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < b.daily_free_usd)
+			  AND (COALESCE(b.monthly_free_usd, 0) <= 0 OR
+				   CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < b.monthly_free_usd)
 		)`, userID, groupID).Scan(&available)
 	return err == nil && available
 }
@@ -414,24 +425,11 @@ func (s *MembershipService) listUserGrants(ctx context.Context, userID int64) ([
 
 func (s *MembershipService) listLevelBenefits(ctx context.Context, levelID int64) ([]MembershipGroupBenefit, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		WITH merged AS (
-			SELECT COALESCE(b.id, 0)::BIGINT AS id, $1::BIGINT AS level_id, s.group_id,
-			       s.pro_only AS allow_access, s.pro_only, s.rate_multiplier, b.rpm_limit
-			FROM omnio_pro_group_settings s
-			LEFT JOIN membership_level_group_benefits b
-			  ON b.level_id = $1 AND b.group_id = s.group_id
-			UNION ALL
-			SELECT b.id, b.level_id, b.group_id, b.allow_access, b.pro_only,
-			       b.rate_multiplier, b.rpm_limit
-			FROM membership_level_group_benefits b
-			WHERE b.level_id = $1
-			  AND NOT EXISTS (
-				SELECT 1 FROM omnio_pro_group_settings s WHERE s.group_id = b.group_id
-			  )
-		)
-		SELECT m.id, m.level_id, m.group_id, g.name, m.allow_access, m.pro_only,
-		       m.rate_multiplier, m.rpm_limit
-		FROM merged m JOIN groups g ON g.id = m.group_id
+		SELECT b.id, b.level_id, b.group_id, g.name, b.allow_access, b.pro_only,
+		       b.rate_multiplier, b.rpm_limit, b.daily_free_usd, b.monthly_free_usd
+		FROM membership_level_group_benefits b
+		JOIN groups g ON g.id = b.group_id
+		WHERE b.level_id = $1
 		ORDER BY g.sort_order, g.id`, levelID)
 	if err != nil {
 		return nil, err
@@ -440,9 +438,20 @@ func (s *MembershipService) listLevelBenefits(ctx context.Context, levelID int64
 	items := make([]MembershipGroupBenefit, 0)
 	for rows.Next() {
 		var item MembershipGroupBenefit
-		var rate sql.NullFloat64
+		var rate, dailyFree, monthlyFree sql.NullFloat64
 		var rpm sql.NullInt32
-		if err := rows.Scan(&item.ID, &item.LevelID, &item.GroupID, &item.GroupName, &item.AllowAccess, &item.ProOnly, &rate, &rpm); err != nil {
+		if err := rows.Scan(
+			&item.ID,
+			&item.LevelID,
+			&item.GroupID,
+			&item.GroupName,
+			&item.AllowAccess,
+			&item.ProOnly,
+			&rate,
+			&rpm,
+			&dailyFree,
+			&monthlyFree,
+		); err != nil {
 			return nil, err
 		}
 		if rate.Valid {
@@ -452,6 +461,14 @@ func (s *MembershipService) listLevelBenefits(ctx context.Context, levelID int64
 		if rpm.Valid {
 			v := int(rpm.Int32)
 			item.RPMLimit = &v
+		}
+		if dailyFree.Valid {
+			v := dailyFree.Float64
+			item.DailyFreeUSD = &v
+		}
+		if monthlyFree.Valid {
+			v := monthlyFree.Float64
+			item.MonthlyFreeUSD = &v
 		}
 		items = append(items, item)
 	}
@@ -471,27 +488,13 @@ func (s *MembershipService) GetEffectiveGroupBenefits(ctx context.Context, userI
 			  AND mg.starts_at <= NOW() AND mg.expires_at > NOW() AND ml.active = TRUE
 			ORDER BY ml.rank DESC, mg.expires_at DESC, ml.id DESC
 			LIMIT 1
-		), merged AS (
-			SELECT COALESCE(b.id, 0)::BIGINT AS id, e.id AS level_id, s.group_id,
-			       s.pro_only AS allow_access, s.pro_only, s.rate_multiplier, b.rpm_limit,
-			       e.name AS level_name, e.rank AS level_rank
-			FROM effective_level e
-			CROSS JOIN omnio_pro_group_settings s
-			LEFT JOIN membership_level_group_benefits b
-			  ON b.level_id = e.id AND b.group_id = s.group_id
-			UNION ALL
-			SELECT b.id, b.level_id, b.group_id, b.allow_access, b.pro_only,
-			       b.rate_multiplier, b.rpm_limit, e.name, e.rank
-			FROM effective_level e
-			JOIN membership_level_group_benefits b ON b.level_id = e.id
-			WHERE NOT EXISTS (
-				SELECT 1 FROM omnio_pro_group_settings s WHERE s.group_id = b.group_id
-			)
 		)
-		SELECT m.id, m.level_id, m.group_id, g.name, m.allow_access, m.pro_only,
-		       m.rate_multiplier, m.rpm_limit, m.level_name, m.level_rank
-		FROM merged m
-		JOIN groups g ON g.id = m.group_id
+		SELECT b.id, b.level_id, b.group_id, g.name, b.allow_access, b.pro_only,
+		       b.rate_multiplier, b.rpm_limit, b.daily_free_usd, b.monthly_free_usd,
+		       e.name, e.rank
+		FROM effective_level e
+		JOIN membership_level_group_benefits b ON b.level_id = e.id
+		JOIN groups g ON g.id = b.group_id
 		ORDER BY g.sort_order, g.id`, userID)
 	if err != nil {
 		return nil, err
@@ -501,10 +504,10 @@ func (s *MembershipService) GetEffectiveGroupBenefits(ctx context.Context, userI
 	result := make(map[int64]EffectiveMembershipGroupBenefit)
 	for rows.Next() {
 		var item EffectiveMembershipGroupBenefit
-		var rate sql.NullFloat64
+		var rate, dailyFree, monthlyFree sql.NullFloat64
 		var rpm sql.NullInt32
 		if err := rows.Scan(&item.ID, &item.LevelID, &item.GroupID, &item.GroupName, &item.AllowAccess,
-			&item.ProOnly, &rate, &rpm, &item.LevelName, &item.LevelRank); err != nil {
+			&item.ProOnly, &rate, &rpm, &dailyFree, &monthlyFree, &item.LevelName, &item.LevelRank); err != nil {
 			return nil, err
 		}
 		if rate.Valid {
@@ -514,6 +517,14 @@ func (s *MembershipService) GetEffectiveGroupBenefits(ctx context.Context, userI
 		if rpm.Valid {
 			v := int(rpm.Int32)
 			item.RPMLimit = &v
+		}
+		if dailyFree.Valid {
+			v := dailyFree.Float64
+			item.DailyFreeUSD = &v
+		}
+		if monthlyFree.Valid {
+			v := monthlyFree.Float64
+			item.MonthlyFreeUSD = &v
 		}
 		result[item.GroupID] = item
 	}
@@ -532,18 +543,13 @@ func (s *MembershipService) GetEffectiveGroupBenefit(ctx context.Context, userID
 	return benefit, ok, nil
 }
 
-// GetProOnlyGroupIDs returns the global set of groups reserved for Omnio Pro.
-// Visibility is global even though access and pricing remain level-specific.
+// GetProOnlyGroupIDs returns groups reserved by at least one Omnio Pro level.
+// A user's effective level still needs its own allow_access benefit.
 func (s *MembershipService) GetProOnlyGroupIDs(ctx context.Context) (map[int64]struct{}, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT group_id FROM omnio_pro_group_settings WHERE pro_only = TRUE
-		UNION
-		SELECT b.group_id
-		FROM membership_level_group_benefits b
-		WHERE b.pro_only = TRUE
-		  AND NOT EXISTS (
-			SELECT 1 FROM omnio_pro_group_settings s WHERE s.group_id = b.group_id
-		  )`)
+		SELECT DISTINCT group_id
+		FROM membership_level_group_benefits
+		WHERE pro_only = TRUE`)
 	if err != nil {
 		return nil, err
 	}
@@ -604,20 +610,58 @@ func (s *MembershipService) UpsertOmnioProGroupSetting(ctx context.Context, sett
 	if setting.MonthlyFreeUSD != nil && *setting.MonthlyFreeUSD < 0 {
 		return OmnioProGroupSetting{}, infraerrors.BadRequest("INVALID_OMNIO_PRO_GROUP", "monthly_free_usd must be non-negative")
 	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return OmnioProGroupSetting{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
 	var exists bool
-	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM groups WHERE id=$1)`, setting.GroupID).Scan(&exists); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM groups WHERE id=$1)`, setting.GroupID).Scan(&exists); err != nil {
 		return OmnioProGroupSetting{}, err
 	}
 	if !exists {
 		return OmnioProGroupSetting{}, ErrGroupNotFound
 	}
 	if setting.RateMultiplier == nil && !setting.ProOnly && setting.DailyFreeUSD == nil && setting.MonthlyFreeUSD == nil {
-		if _, err := s.db.ExecContext(ctx, `DELETE FROM omnio_pro_group_settings WHERE group_id=$1`, setting.GroupID); err != nil {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE membership_level_group_benefits
+			SET rate_multiplier=NULL, pro_only=FALSE, daily_free_usd=NULL,
+			    monthly_free_usd=NULL, updated_at=NOW()
+			WHERE group_id=$1`, setting.GroupID); err != nil {
+			return OmnioProGroupSetting{}, err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM omnio_pro_group_settings WHERE group_id=$1`, setting.GroupID); err != nil {
+			return OmnioProGroupSetting{}, err
+		}
+		if err := tx.Commit(); err != nil {
 			return OmnioProGroupSetting{}, err
 		}
 		return setting, nil
 	}
-	_, err := s.db.ExecContext(ctx, `
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO membership_level_group_benefits (
+			level_id, group_id, allow_access, rate_multiplier, rpm_limit, pro_only,
+			daily_free_usd, monthly_free_usd
+		)
+		SELECT id, $1, $3, $2, NULL, $3, $4, $5
+		FROM membership_levels
+		ON CONFLICT (level_id, group_id) DO UPDATE SET
+			allow_access=membership_level_group_benefits.allow_access OR EXCLUDED.pro_only,
+			rate_multiplier=EXCLUDED.rate_multiplier,
+			pro_only=EXCLUDED.pro_only,
+			daily_free_usd=EXCLUDED.daily_free_usd,
+			monthly_free_usd=EXCLUDED.monthly_free_usd,
+			updated_at=NOW()`,
+		setting.GroupID,
+		setting.RateMultiplier,
+		setting.ProOnly,
+		setting.DailyFreeUSD,
+		setting.MonthlyFreeUSD,
+	); err != nil {
+		return OmnioProGroupSetting{}, err
+	}
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO omnio_pro_group_settings (
 			group_id, rate_multiplier, pro_only, daily_free_usd, monthly_free_usd
 		)
@@ -635,6 +679,9 @@ func (s *MembershipService) UpsertOmnioProGroupSetting(ctx context.Context, sett
 		setting.MonthlyFreeUSD,
 	)
 	if err != nil {
+		return OmnioProGroupSetting{}, err
+	}
+	if err := tx.Commit(); err != nil {
 		return OmnioProGroupSetting{}, err
 	}
 	return s.GetOmnioProGroupSetting(ctx, setting.GroupID)
@@ -799,38 +846,39 @@ func (s *MembershipService) UpsertGroupBenefit(ctx context.Context, benefit Memb
 	if benefit.RPMLimit != nil && *benefit.RPMLimit < 0 {
 		return infraerrors.BadRequest("INVALID_MEMBERSHIP_BENEFIT", "rpm_limit must be non-negative")
 	}
+	if benefit.DailyFreeUSD != nil && *benefit.DailyFreeUSD < 0 {
+		return infraerrors.BadRequest("INVALID_MEMBERSHIP_BENEFIT", "daily_free_usd must be non-negative")
+	}
+	if benefit.MonthlyFreeUSD != nil && *benefit.MonthlyFreeUSD < 0 {
+		return infraerrors.BadRequest("INVALID_MEMBERSHIP_BENEFIT", "monthly_free_usd must be non-negative")
+	}
 	if benefit.ProOnly && !benefit.AllowAccess {
 		return infraerrors.BadRequest("INVALID_MEMBERSHIP_BENEFIT", "pro_only requires allow_access")
 	}
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO membership_level_group_benefits (level_id, group_id, allow_access, rate_multiplier, rpm_limit, pro_only)
-		VALUES ($1,$2,$3,$4,$5,$6)
+		INSERT INTO membership_level_group_benefits (
+			level_id, group_id, allow_access, rate_multiplier, rpm_limit, pro_only,
+			daily_free_usd, monthly_free_usd
+		)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 		ON CONFLICT (level_id, group_id) DO UPDATE SET allow_access=EXCLUDED.allow_access,
 			rate_multiplier=EXCLUDED.rate_multiplier, rpm_limit=EXCLUDED.rpm_limit,
-			pro_only=EXCLUDED.pro_only, updated_at=NOW()`,
-		benefit.LevelID, benefit.GroupID, benefit.AllowAccess, benefit.RateMultiplier, benefit.RPMLimit, benefit.ProOnly)
-	if err != nil {
-		return err
-	}
-	currentSetting, getErr := s.GetOmnioProGroupSetting(ctx, benefit.GroupID)
-	if getErr != nil {
-		return getErr
-	}
-	_, err = s.UpsertOmnioProGroupSetting(ctx, OmnioProGroupSetting{
-		GroupID:        benefit.GroupID,
-		RateMultiplier: benefit.RateMultiplier,
-		ProOnly:        benefit.ProOnly,
-		DailyFreeUSD:   currentSetting.DailyFreeUSD,
-		MonthlyFreeUSD: currentSetting.MonthlyFreeUSD,
-	})
+			pro_only=EXCLUDED.pro_only, daily_free_usd=EXCLUDED.daily_free_usd,
+			monthly_free_usd=EXCLUDED.monthly_free_usd, updated_at=NOW()`,
+		benefit.LevelID,
+		benefit.GroupID,
+		benefit.AllowAccess,
+		benefit.RateMultiplier,
+		benefit.RPMLimit,
+		benefit.ProOnly,
+		benefit.DailyFreeUSD,
+		benefit.MonthlyFreeUSD,
+	)
 	return err
 }
 
 func (s *MembershipService) DeleteGroupBenefit(ctx context.Context, levelID, groupID int64) error {
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM membership_level_group_benefits WHERE level_id=$1 AND group_id=$2`, levelID, groupID); err != nil {
-		return err
-	}
-	_, err := s.db.ExecContext(ctx, `DELETE FROM omnio_pro_group_settings WHERE group_id=$1`, groupID)
+	_, err := s.db.ExecContext(ctx, `DELETE FROM membership_level_group_benefits WHERE level_id=$1 AND group_id=$2`, levelID, groupID)
 	return err
 }
 

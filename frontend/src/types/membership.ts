@@ -7,17 +7,13 @@ export interface MembershipGroupBenefit {
   pro_only: boolean
   rate_multiplier?: number | null
   rpm_limit?: number | null
-}
-
-export interface OmnioProGroupSetting {
-  group_id: number
-  rate_multiplier?: number | null
-  pro_only: boolean
   daily_free_usd?: number | null
   monthly_free_usd?: number | null
 }
 
 export interface OmnioProQuotaProgress {
+  level_id: number
+  level_name: string
   group_id: number
   group_name: string
   daily_limit_usd: number
