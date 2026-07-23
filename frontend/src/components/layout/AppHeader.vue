@@ -1,6 +1,6 @@
 <template>
   <header class="app-header glass sticky top-0 z-30 border-b border-gray-200/50 dark:border-dark-700/50">
-    <div class="flex h-12 items-center justify-between px-3 md:px-4">
+    <div class="flex h-12 items-center justify-between gap-2 px-2 sm:px-3 md:px-4">
       <router-link to="/" class="app-header-brand" :aria-label="siteName">
         <span class="app-header-logo">
           <img :src="siteLogo || '/logo.png'" alt="" />
@@ -9,11 +9,11 @@
       </router-link>
 
       <!-- Left: Mobile menu + primary product navigation -->
-      <div class="app-header-context flex items-center gap-3">
+      <div class="app-header-context flex shrink-0 items-center gap-2 sm:gap-3">
         <button
           @click="toggleMobileSidebar"
           class="btn-ghost btn-icon lg:hidden"
-          aria-label="Toggle Menu"
+          :aria-label="t('common.toggleMenu')"
         >
           <Icon name="menu" size="md" />
         </button>
@@ -29,7 +29,7 @@
       </div>
 
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
-      <div class="flex items-center gap-3">
+      <div class="flex min-w-0 items-center gap-1 sm:gap-3">
         <HeaderSearch v-if="user" />
 
         <!-- Announcement Bell -->
@@ -43,7 +43,7 @@
           <button
             @click="toggleDropdown"
             class="profile-trigger"
-            aria-label="User Menu"
+            :aria-label="t('common.userMenu')"
           >
             <div class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold text-white" :style="avatarStyle">
               <img

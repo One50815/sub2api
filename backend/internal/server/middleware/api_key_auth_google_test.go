@@ -853,7 +853,7 @@ func TestApiKeyAuthWithSubscriptionGoogle_SubscriptionLimitExceededReturns429(t 
 	}
 	apiKey.GroupID = &group.ID
 
-	apiKeyService := newTestAPIKeyService(fakeAPIKeyRepo{
+	apiKeyRepo := fakeAPIKeyRepo{
 		getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
 			if key != apiKey.Key {
 				return nil, service.ErrAPIKeyNotFound
@@ -861,7 +861,7 @@ func TestApiKeyAuthWithSubscriptionGoogle_SubscriptionLimitExceededReturns429(t 
 			clone := *apiKey
 			return &clone, nil
 		},
-	})
+	}
 
 	now := time.Now()
 	sub := &service.UserSubscription{
@@ -873,7 +873,7 @@ func TestApiKeyAuthWithSubscriptionGoogle_SubscriptionLimitExceededReturns429(t 
 		DailyWindowStart: &now,
 		DailyUsageUSD:    10,
 	}
-	subscriptionService := service.NewSubscriptionService(nil, fakeGoogleSubscriptionRepo{
+	subscriptionRepo := fakeGoogleSubscriptionRepo{
 		getActive: func(ctx context.Context, userID, groupID int64) (*service.UserSubscription, error) {
 			if userID != user.ID || groupID != group.ID {
 				return nil, service.ErrSubscriptionNotFound
@@ -886,7 +886,9 @@ func TestApiKeyAuthWithSubscriptionGoogle_SubscriptionLimitExceededReturns429(t 
 		resetDaily:     func(ctx context.Context, id int64, start time.Time) error { return nil },
 		resetWeekly:    func(ctx context.Context, id int64, start time.Time) error { return nil },
 		resetMonthly:   func(ctx context.Context, id int64, start time.Time) error { return nil },
-	}, nil, nil, &config.Config{RunMode: config.RunModeStandard})
+	}
+	apiKeyService := service.NewAPIKeyService(apiKeyRepo, nil, nil, subscriptionRepo, nil, nil, &config.Config{})
+	subscriptionService := service.NewSubscriptionService(nil, subscriptionRepo, nil, nil, &config.Config{RunMode: config.RunModeStandard})
 
 	r := gin.New()
 	r.Use(APIKeyAuthWithSubscriptionGoogle(apiKeyService, subscriptionService, &config.Config{RunMode: config.RunModeStandard}))

@@ -71,10 +71,11 @@
             <div
               v-for="(column, columnIndex) in dataColumns"
               :key="column.key"
-              :class="['mobile-data-field', columnIndex === 0 && 'mobile-data-field-primary']"
+              :data-field="column.key"
+              :class="['mobile-data-field', 'min-w-0', columnIndex === 0 && 'mobile-data-field-primary']"
             >
               <span class="mobile-data-label">{{ column.label }}</span>
-              <div class="mobile-data-value">
+              <div class="mobile-data-value min-w-0 max-w-full">
                 <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]" :expanded="actionsExpanded">
                   {{ column.formatter ? column.formatter(row[column.key], row) : row[column.key] }}
                 </slot>

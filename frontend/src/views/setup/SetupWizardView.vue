@@ -112,6 +112,10 @@
                   <input id="setup-redis-port" v-model.number="formData.redis.port" type="number" class="input" placeholder="6379" inputmode="numeric" />
                 </div>
                 <div class="setup-field">
+                  <label class="input-label" for="setup-redis-username">{{ t('setup.redis.username') }}</label>
+                  <input id="setup-redis-username" v-model="formData.redis.username" type="text" class="input" :placeholder="t('setup.redis.usernamePlaceholder')" autocomplete="username" />
+                </div>
+                <div class="setup-field">
                   <label class="input-label" for="setup-redis-password">{{ t('setup.redis.password') }}</label>
                   <input id="setup-redis-password" v-model="formData.redis.password" type="password" class="input" :placeholder="t('setup.redis.passwordPlaceholder')" autocomplete="new-password" />
                 </div>
@@ -303,6 +307,7 @@ const formData = reactive<InstallRequest>({
   redis: {
     host: 'localhost',
     port: 6379,
+    username: '',
     password: '',
     db: 0,
     enable_tls: false

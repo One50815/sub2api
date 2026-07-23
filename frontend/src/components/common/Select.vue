@@ -8,7 +8,9 @@
       :aria-expanded="isOpen"
       aria-haspopup="listbox"
       :aria-controls="isOpen ? `${instanceId}-listbox` : undefined"
-      :aria-label="placeholderText"
+      :id="id"
+      :aria-label="ariaLabel ?? placeholderText"
+      :aria-describedby="ariaDescribedby"
       :class="[
         'select-trigger',
         isOpen && 'select-trigger-open',
@@ -69,6 +71,7 @@
               v-model="searchQuery"
               type="text"
               :placeholder="searchPlaceholderText"
+              :aria-label="searchPlaceholderText"
               class="select-search-input"
               @click.stop
             />
@@ -153,6 +156,9 @@ interface Props {
   creatable?: boolean
   creatablePrefix?: string
   clearable?: boolean
+  id?: string
+  ariaLabel?: string
+  ariaDescribedby?: string
 }
 
 interface Emits {

@@ -1,8 +1,8 @@
 # Sub2API 定制版长期项目记忆
 
 > 状态：生效中  
-> 最后核对日期：2026-07-21  
-> 基线：`main`，`d4b9797f`（版本 `0.1.161`）  
+> 最后核对日期：2026-07-23
+> 基线：Omnio 定制快照 `eb3087cc` + 官方 `cb24522dd53f8f363d008e3afdc8e4baf9788cab`（版本 `0.1.164`）
 > 决策：采用“方案一”，保留 Sub2API 的 Vue 业务实现，高保真、全站复刻独立 React 前端的视觉与交互  
 > 前端重做状态：已完成，进入长期维护与上游同步阶段  
 > 维护要求：每次改变架构、接口、合并策略或完成一个重做阶段时，同步更新本文档
@@ -60,7 +60,7 @@ git log -1 --oneline
 | 当前分支 | `main` |
 | Fork 远端 `origin` | `https://github.com/One50815/sub2api.git` |
 | 官方上游 | `https://github.com/Wei-Shaw/sub2api.git` |
-| `upstream` 远端 | 创建本文档时尚未配置 |
+| `upstream` 远端 | `https://github.com/Wei-Shaw/sub2api.git` |
 
 `DEV_GUIDE.md` 中出现过旧 Fork 地址。远端身份以 `git remote -v` 的实时结果和上表为准；远端变化后必须更新本节。
 
@@ -491,6 +491,7 @@ go test -tags=e2e -v -timeout=300s ./internal/integration/...
 | 2026-07-22 | `sub2api:custom-20260722-omnio-pro-fix1` / `FORK-003` | 公开订阅商品正式并入 Omnio Pro：旧订阅前端入口自动跳转，购买页只展示充值和 Omnio Pro；后端禁止新建 subscription 订单；迁移 187/188 已在生产执行，历史可售订阅方案仅在存在时迁移为 Omnio Pro offers 和基础访问权益 | 保留历史订阅订单履约、退款、表结构和内部 API，避免既有用户权益丢失；生产当前没有历史订阅方案，因此已创建 Omnio Pro 等级但没有自动生成售卖方案，管理员须在 `/admin/omnio-pro` 配置价格和期限后才能购买；本次不重复视觉验收 |
 | 2026-07-23 | `sub2api:custom-20260723-omnio-pro-groups` / `FORK-002-omnio-pro-group-settings` | 修正 Omnio Pro 分组定价模型并部署生产：每个分组分别保存“普通用户倍率”和“Omnio Pro 倍率”，例如同一站点可让 plus 号池使用 `0.2 / 0.15`、pro 号池使用 `0.3 / 0.25`；计费优先级固定为“人工用户倍率 > 分组独立 Pro 倍率 > 分组普通倍率”；API Key 分组选择器对 Pro 用户展示普通倍率删除线和格式化后的 Pro 实际倍率 | 独立 Pro 倍率与“仅 Omnio Pro 可见和绑定”开关统一放在后台“分组管理”的新建/编辑表单；生产迁移 189 已执行并新增 `omnio_pro_group_settings` 作为分组级来源，兼容旧等级权益；Omnio Pro 等级列表增加安全删除，存在方案、发放或权益关联时拒绝删除 |
 | 2026-07-23 | `sub2api:custom-20260723-omnio-pro-quota` / `FORK-002-omnio-pro-free-quota` | 为每个分组增加独立的 Omnio Pro 每日/月度免费美元额度并部署生产；有效 Pro 用户请求先按最终 Pro 倍率计算费用，再在统一账务事务中原子拆分为免费额度与钱包扣费，按北京时间自然日和自然月重置；每日或月度任一上限用完后，超出部分自动扣钱包 | 生产迁移 190 已执行，新增额度配置、当前窗口聚合和不可变逐请求拆分事件；余额不足但仍有免费额度时允许请求，跨额度边界的单次请求按剩余额度与钱包精确拆分；后台分组编辑页配置额度，用户 `/omnio-pro` 页面展示今日和本月用量与剩余 |
+| 2026-07-23 | 官方 `0.1.164` / `cb24522dd53f8f363d008e3afdc8e4baf9788cab` | 从 Omnio 快照 `eb3087cc` 建立 `sync/upstream-20260723`，通过透明导入提交 `204c3bbd` 合并官方源码；吸收组合模型路由、分组 reasoning effort 策略、Ollama Cloud 用量、图片存储/鉴权缓存、支付宝移动端 deep link、运维移动端和可访问性修复 | 保留 Omnio Vue 视觉、Logo、首页、认证、导航、工单、Omnio Pro 及公开订阅退役边界；支付响应同时保留 `membership_offers` 与 `alipay_mobile_precreate_deep_link`，安装向导保留 Omnio 页面并加入 Redis ACL 用户名；新增迁移 `185_group_reasoning_effort_policy.sql`、`186_alipay_mobile_precreate_deep_link.sql`、`186_group_auth_cache_image_generation.sql`，与 Fork 既有同号迁移按完整文件名独立执行；本地验证已通过，Docker 镜像构建与生产发布等待可用服务器登录 |
 
 每次更新记录一行，内容应说明“为什么”，不能只写“更新文档”。当表格过长时，可按年度归档到 `docs/history/`，但保留最近一年和所有未完成决策。
 
@@ -520,6 +521,7 @@ go test -tags=e2e -v -timeout=300s ./internal/integration/...
 - 2026-07-22 Omnio Pro 扩展门禁：`go test ./cmd/server ./internal/service ./internal/handler ./internal/repository ./internal/server/middleware -run '^$'`、Pro 分组权限定向单测、`pnpm run typecheck`、`pnpm run build` 通过；没有重复运行全量前端测试或浏览器视觉验收。
 - 2026-07-23 分组级 Omnio Pro 配置门禁：受影响的 service、repository、admin handler 和 routes 后端定向编译通过，前端 `pnpm run typecheck` 与 `pnpm run build` 通过，`git diff --check` 通过；按项目要求不重复构建和视觉验收。
 - 2026-07-23 Omnio Pro 免费额度门禁：后端受影响包定向编译通过，额度跨日/月边界原子拆分单测通过；前端 `pnpm run typecheck` 与一次 Vite 生产构建通过；未重复执行全量测试或视觉验收。
+- 2026-07-23 官方 `0.1.164` 同步门禁：`go generate ./ent`、`go generate ./cmd/server` 完成；`go test ./...` 全量通过；前端 `pnpm run lint:check`、`pnpm run typecheck`、`pnpm run test:run`（187 个测试文件、1288 个测试）和 `pnpm run build` 全量通过；`git diff --check` 通过且无冲突标记。当前 Windows 环境没有 Docker CLI，候选镜像须在生产服务器或 Docker 构建机上生成后再发布。
 
 ### 14.3 后续维护入口
 
