@@ -777,6 +777,7 @@ func userSubscriptionFromServiceBase(sub *service.UserSubscription) UserSubscrip
 		RevokedAt:          sub.DeletedAt,
 		User:               UserFromServiceShallow(sub.User),
 		Group:              GroupFromServiceShallow(sub.Group),
+		Entitlement:        sub.Entitlement,
 	}
 }
 

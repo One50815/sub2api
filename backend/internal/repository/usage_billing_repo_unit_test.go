@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
@@ -95,6 +96,59 @@ func TestApplyUsageBillingEffects_FlagsBalanceOverdraft(t *testing.T) {
 	require.NotNil(t, result.NewBalance)
 	require.InDelta(t, -5.0, *result.NewBalance, 0.000001)
 	require.True(t, result.BalanceOverdrafted)
+	require.NoError(t, tx.Commit())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestAllocateOmnioProFreeQuota_SplitsAtDailyAndMonthlyBoundary(t *testing.T) {
+	ctx := context.Background()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	currentDay := time.Date(2026, time.July, 23, 0, 0, 0, 0, time.UTC)
+	currentMonth := time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
+
+	mock.ExpectBegin()
+	tx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	mock.ExpectQuery(`(?s)SELECT s\.daily_free_usd, s\.monthly_free_usd.*FROM omnio_pro_group_settings`).
+		WithArgs(int64(7), int64(9)).
+		WillReturnRows(sqlmock.NewRows([]string{"daily_free_usd", "monthly_free_usd"}).AddRow(10.0, 100.0))
+	mock.ExpectQuery(`(?s)SELECT.*CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai'`).
+		WillReturnRows(sqlmock.NewRows([]string{"day_start", "month_start"}).AddRow(currentDay, currentMonth))
+	mock.ExpectExec(`(?s)INSERT INTO omnio_pro_quota_usage`).
+		WithArgs(int64(7), int64(9), currentDay, currentMonth).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery(`(?s)SELECT daily_window_start, monthly_window_start, daily_used_usd, monthly_used_usd.*FOR UPDATE`).
+		WithArgs(int64(7), int64(9)).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"daily_window_start",
+			"monthly_window_start",
+			"daily_used_usd",
+			"monthly_used_usd",
+		}).AddRow(currentDay, currentMonth, 8.0, 98.0))
+	mock.ExpectExec(`(?s)UPDATE omnio_pro_quota_usage`).
+		WithArgs(int64(7), int64(9), currentDay, currentMonth, 10.0, 100.0).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec(`(?s)INSERT INTO omnio_pro_quota_events`).
+		WithArgs("req-pro-quota", int64(11), int64(7), int64(9), 5.0, 2.0, 3.0).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	allocation, err := allocateOmnioProFreeQuota(ctx, tx, &service.UsageBillingCommand{
+		RequestID:   "req-pro-quota",
+		APIKeyID:    11,
+		UserID:      7,
+		GroupID:     9,
+		BalanceCost: 5,
+	})
+	require.NoError(t, err)
+	require.True(t, allocation.Applied)
+	require.InDelta(t, 2, allocation.FreeCost, 0.000001)
+	require.InDelta(t, 3, allocation.WalletCost, 0.000001)
+	require.InDelta(t, 10, allocation.DailyUsed, 0.000001)
+	require.InDelta(t, 100, allocation.MonthlyUsed, 0.000001)
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())
 }

@@ -651,15 +651,31 @@ func ProvideAPIKeyService(
 	cfg *config.Config,
 	billingCacheService *BillingCacheService,
 	concurrencyService *ConcurrencyService,
+	membershipService *MembershipService,
 ) *APIKeyService {
 	svc := NewAPIKeyService(apiKeyRepo, userRepo, groupRepo, userSubRepo, userGroupRateRepo, cache, cfg)
 	svc.SetRateLimitCacheInvalidator(billingCacheService)
 	svc.SetConcurrencyService(concurrencyService)
+	svc.SetMembershipService(membershipService)
+	return svc
+}
+
+func ProvideSubscriptionService(
+	groupRepo GroupRepository,
+	userSubRepo UserSubscriptionRepository,
+	billingCacheService *BillingCacheService,
+	entClient *dbent.Client,
+	cfg *config.Config,
+	membershipService *MembershipService,
+) *SubscriptionService {
+	svc := NewSubscriptionService(groupRepo, userSubRepo, billingCacheService, entClient, cfg)
+	svc.SetMembershipService(membershipService)
 	return svc
 }
 
 // ProviderSet is the Wire provider set for all services
 var ProviderSet = wire.NewSet(
+	NewMembershipService,
 	// Core services
 	NewAuthService,
 	NewUserService,
@@ -677,6 +693,7 @@ var ProviderSet = wire.NewSet(
 	NewBillingService,
 	ProvideBillingCacheService,
 	NewAnnouncementService,
+	NewTicketService,
 	NewAdminService,
 	NewGatewayService,
 	NewOpenAIGatewayService,
@@ -726,7 +743,7 @@ var ProviderSet = wire.NewSet(
 	NewNotificationEmailService,
 	ProvideEmailQueueService,
 	NewTurnstileService,
-	NewSubscriptionService,
+	ProvideSubscriptionService,
 	wire.Bind(new(DefaultSubscriptionAssigner), new(*SubscriptionService)),
 	ProvideConcurrencyService,
 	ProvideUserMessageQueueService,
@@ -793,9 +810,10 @@ func ProvideBalanceNotifyService(emailService *EmailService, settingRepo Setting
 }
 
 // ProvidePaymentService creates PaymentService and attaches notification email delivery.
-func ProvidePaymentService(entClient *dbent.Client, registry *payment.Registry, loadBalancer payment.LoadBalancer, redeemService *RedeemService, subscriptionSvc *SubscriptionService, configService *PaymentConfigService, userRepo UserRepository, groupRepo GroupRepository, affiliateService *AffiliateService, notificationEmailService *NotificationEmailService) *PaymentService {
+func ProvidePaymentService(entClient *dbent.Client, registry *payment.Registry, loadBalancer payment.LoadBalancer, redeemService *RedeemService, subscriptionSvc *SubscriptionService, configService *PaymentConfigService, userRepo UserRepository, groupRepo GroupRepository, affiliateService *AffiliateService, notificationEmailService *NotificationEmailService, membershipService *MembershipService) *PaymentService {
 	svc := NewPaymentService(entClient, registry, loadBalancer, redeemService, subscriptionSvc, configService, userRepo, groupRepo, affiliateService)
 	svc.SetNotificationEmailService(notificationEmailService)
+	svc.SetMembershipService(membershipService)
 	return svc
 }
 

@@ -7,7 +7,7 @@
           {{ t('auth.welcomeBack') }}
         </h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
-          {{ t('auth.signInToAccount') }}
+          {{ t('auth.signInToAccount', { siteName }) }}
         </p>
       </div>
       <!-- Login Form -->
@@ -225,6 +225,7 @@ const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 const router = useRouter()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const siteName = computed(() => appStore.siteName || 'Sub2API')
 
 // ==================== State ====================
 

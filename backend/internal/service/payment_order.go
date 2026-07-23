@@ -58,6 +58,13 @@ func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest
 	if plan != nil {
 		orderAmount = plan.Price
 		limitAmount = plan.Price
+	} else if req.OrderType == payment.OrderTypeMembership {
+		offer, offerErr := s.membershipService.GetOffer(ctx, req.PlanID, true)
+		if offerErr != nil {
+			return nil, offerErr
+		}
+		orderAmount = offer.Price
+		limitAmount = offer.Price
 	} else if req.OrderType == payment.OrderTypeBalance {
 		orderAmount = calculateCreditedBalance(req.Amount, cfg.BalanceRechargeMultiplier)
 	}
@@ -119,7 +126,22 @@ func (s *PaymentService) validateOrderInput(ctx context.Context, req CreateOrder
 		return nil, infraerrors.Forbidden("BALANCE_PAYMENT_DISABLED", "balance recharge has been disabled")
 	}
 	if req.OrderType == payment.OrderTypeSubscription {
-		return s.validateSubOrder(ctx, req)
+		// Subscription plans are retained only as a historical compatibility
+		// layer. New purchases use Omnio Pro membership offers instead.
+		return nil, infraerrors.Forbidden("SUBSCRIPTIONS_RETIRED", "subscriptions are retired; purchase an Omnio Pro offer")
+	}
+	if req.OrderType == payment.OrderTypeMembership {
+		if s.membershipService == nil {
+			return nil, infraerrors.ServiceUnavailable("MEMBERSHIP_UNAVAILABLE", "membership service is unavailable")
+		}
+		if req.PlanID <= 0 {
+			return nil, infraerrors.BadRequest("INVALID_INPUT", "membership order requires an offer")
+		}
+		_, err := s.membershipService.GetOffer(ctx, req.PlanID, true)
+		return nil, err
+	}
+	if req.OrderType != payment.OrderTypeBalance {
+		return nil, infraerrors.BadRequest("INVALID_ORDER_TYPE", "unsupported order type")
 	}
 	if math.IsNaN(req.Amount) || math.IsInf(req.Amount, 0) || req.Amount <= 0 {
 		return nil, infraerrors.BadRequest("INVALID_AMOUNT", "amount must be a positive number")
@@ -208,6 +230,8 @@ func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderReq
 	}
 	if plan != nil {
 		b.SetPlanID(plan.ID).SetSubscriptionGroupID(plan.GroupID).SetSubscriptionDays(psComputeValidityDays(plan.ValidityDays, plan.ValidityUnit))
+	} else if req.OrderType == payment.OrderTypeMembership {
+		b.SetPlanID(req.PlanID)
 	}
 	order, err := b.Save(ctx)
 	if err != nil {
@@ -217,6 +241,11 @@ func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderReq
 	order, err = tx.PaymentOrder.UpdateOneID(order.ID).SetRechargeCode(code).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("set recharge code: %w", err)
+	}
+	if plan != nil && s.membershipService != nil {
+		if err := s.membershipService.PrepareSubscriptionGrant(ctx, tx.Client(), order.ID, req.UserID, plan.ID, plan.GroupID); err != nil {
+			return nil, fmt.Errorf("snapshot subscription entitlements: %w", err)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit order transaction: %w", err)
@@ -414,6 +443,11 @@ func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.Paymen
 			WithMetadata(map[string]string{"provider": sel.ProviderKey, "instance_id": sel.InstanceID})
 	}
 	subject := s.buildPaymentSubject(plan, limitAmount, cfg, sel)
+	if req.OrderType == payment.OrderTypeMembership && s.membershipService != nil {
+		if offer, offerErr := s.membershipService.GetOffer(ctx, req.PlanID, false); offerErr == nil {
+			subject = offer.Name
+		}
+	}
 	outTradeNo := order.OutTradeNo
 	canonicalReturnURL, err := CanonicalizeReturnURL(req.ReturnURL, req.SrcHost, req.SrcURL)
 	if err != nil {
@@ -635,7 +669,7 @@ func calculateCreateOrderPayAmount(limitAmount, feeRate float64, currency string
 
 func calculateCreateOrderPayAmountForOrderType(limitAmount, feeRate float64, currency, orderType string, usdToCnyRate float64) (string, float64, error) {
 	paymentAmount := limitAmount
-	if orderType == payment.OrderTypeSubscription {
+	if orderType == payment.OrderTypeSubscription || orderType == payment.OrderTypeMembership {
 		paymentAmount = calculateSubscriptionGatewayBaseAmount(limitAmount, usdToCnyRate, currency)
 	}
 	return calculateCreateOrderPayAmount(paymentAmount, feeRate, currency)

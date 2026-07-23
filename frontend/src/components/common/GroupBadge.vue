@@ -9,12 +9,26 @@
     <PlatformIcon v-if="platform" :platform="platform" size="sm" />
     <!-- Group name -->
     <span class="truncate">{{ name }}</span>
+    <span
+      v-if="proOnly"
+      class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300"
+      :title="proLevelName || t('common.proExclusive')"
+    >
+      {{ t('common.proExclusive') }}
+    </span>
+    <span
+      v-else-if="rateSource === 'pro'"
+      class="rounded bg-primary-500/15 px-1.5 py-0.5 text-[10px] font-bold text-primary-700 dark:text-primary-300"
+      :title="proLevelName || t('common.omnioPro')"
+    >
+      {{ t('common.omnioPro') }}
+    </span>
     <!-- Right side label -->
     <span v-if="showLabel" :class="labelClass">
-      <template v-if="hasCustomRate">
-        <!-- 原倍率删除线 + 专属倍率高亮 -->
-        <span class="line-through opacity-50 mr-0.5">{{ rateMultiplier }}x</span>
-        <span class="font-bold">{{ userRateMultiplier }}x</span>
+      <template v-if="showRateAdjustment">
+        <span class="line-through opacity-50 mr-0.5">{{ formatCompactMultiplier(rateMultiplier ?? 1) }}x</span>
+        <span class="font-bold">{{ formatCompactMultiplier(resolvedEffectiveRate ?? 1) }}x</span>
+        <span class="ml-1 opacity-70">{{ t('admin.groups.rateLabel') }}</span>
       </template>
       <template v-else>
         {{ labelText }}
@@ -33,6 +47,7 @@ import type { SubscriptionType, GroupPlatform } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
 import PlatformIcon from './PlatformIcon.vue'
+import { formatCompactMultiplier } from '@/utils/formatters'
 
 interface Props {
   name: string
@@ -40,6 +55,11 @@ interface Props {
   subscriptionType?: SubscriptionType
   rateMultiplier?: number
   userRateMultiplier?: number | null // 用户专属倍率
+  personalRateMultiplier?: number | null
+  proRateMultiplier?: number | null
+  effectiveRateMultiplier?: number | null
+  proOnly?: boolean
+  proLevelName?: string
   peakRateEnabled?: boolean
   peakStart?: string
   peakEnd?: string
@@ -59,6 +79,11 @@ const props = withDefaults(defineProps<Props>(), {
   showRate: true,
   daysRemaining: null,
   userRateMultiplier: null,
+  personalRateMultiplier: null,
+  proRateMultiplier: null,
+  effectiveRateMultiplier: null,
+  proOnly: false,
+  proLevelName: '',
   peakRateEnabled: false,
   alwaysShowRate: false
 })
@@ -67,14 +92,26 @@ const { t } = useI18n()
 
 const isSubscription = computed(() => props.subscriptionType === 'subscription')
 
-// 是否有专属倍率（且与默认倍率不同）
-const hasCustomRate = computed(() => {
-  return (
-    props.userRateMultiplier !== null &&
-    props.userRateMultiplier !== undefined &&
-    props.rateMultiplier !== undefined &&
-    props.userRateMultiplier !== props.rateMultiplier
-  )
+const resolvedPersonalRate = computed(() => props.personalRateMultiplier ?? props.userRateMultiplier)
+
+const resolvedEffectiveRate = computed(() => {
+  return props.effectiveRateMultiplier ?? resolvedPersonalRate.value ?? props.proRateMultiplier ?? props.rateMultiplier
+})
+
+const rateSource = computed<'personal' | 'pro' | 'base'>(() => {
+  if (resolvedPersonalRate.value !== null && resolvedPersonalRate.value !== undefined) return 'personal'
+  if (props.proRateMultiplier !== null && props.proRateMultiplier !== undefined) return 'pro'
+  return 'base'
+})
+
+const hasAdjustedRate = computed(() => {
+  return props.rateMultiplier !== undefined &&
+    resolvedEffectiveRate.value !== undefined &&
+    Math.abs(resolvedEffectiveRate.value - props.rateMultiplier) > 1e-9
+})
+
+const showRateAdjustment = computed(() => {
+  return hasAdjustedRate.value && (!isSubscription.value || props.alwaysShowRate)
 })
 
 const appStore = useAppStore()
@@ -105,12 +142,12 @@ const showLabel = computed(() => {
   // 订阅类型：显示天数或"订阅"
   if (isSubscription.value) return true
   // 标准类型：显示倍率（包括专属倍率）
-  return props.rateMultiplier !== undefined || hasCustomRate.value
+  return props.rateMultiplier !== undefined || resolvedEffectiveRate.value !== undefined
 })
 
 // Label text
 const labelText = computed(() => {
-  const rateLabel = props.rateMultiplier !== undefined ? `${props.rateMultiplier}x` : ''
+  const rateLabel = resolvedEffectiveRate.value !== undefined ? `${formatCompactMultiplier(resolvedEffectiveRate.value)}x` : ''
   if (isSubscription.value && !props.alwaysShowRate) {
     // 如果有剩余天数，显示天数
     if (props.daysRemaining !== null && props.daysRemaining !== undefined) {

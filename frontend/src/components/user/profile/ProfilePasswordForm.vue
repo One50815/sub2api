@@ -1,14 +1,14 @@
 <template>
-  <div :class="props.embedded ? 'space-y-4' : 'card'">
+  <div :class="props.embedded ? 'space-y-4' : 'overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-700 dark:bg-dark-800'">
     <div
       v-if="!props.embedded"
-      class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
+      class="border-b border-gray-200 px-4 py-3.5 dark:border-dark-700 sm:px-5"
     >
       <h2 class="text-lg font-medium text-gray-900 dark:text-white">
         {{ t('profile.changePassword') }}
       </h2>
     </div>
-    <div :class="props.embedded ? '' : 'px-6 py-6'">
+    <div :class="props.embedded ? '' : 'p-4 sm:p-5'">
       <form @submit.prevent="handleChangePassword" class="space-y-4">
         <div v-if="props.embedded">
           <p class="text-sm font-semibold text-gray-900 dark:text-white">
@@ -60,7 +60,7 @@
           />
         </div>
 
-        <div class="flex justify-end pt-4">
+        <div class="flex justify-end pt-2">
           <button type="submit" :disabled="loading" class="btn btn-primary">
             {{ loading ? t('profile.changingPassword') : t('profile.changePasswordButton') }}
           </button>

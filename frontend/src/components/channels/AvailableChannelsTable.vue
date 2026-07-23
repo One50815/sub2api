@@ -95,7 +95,11 @@
                     :platform="g.platform as GroupPlatform"
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                     :rate-multiplier="g.rate_multiplier"
-                    :user-rate-multiplier="userGroupRates[g.id] ?? null"
+                    :personal-rate-multiplier="g.personal_rate_multiplier ?? null"
+                    :pro-rate-multiplier="g.pro_rate_multiplier ?? null"
+                    :effective-rate-multiplier="g.effective_rate_multiplier"
+                    :pro-only="g.pro_only"
+                    :pro-level-name="g.pro_level_name || ''"
                     always-show-rate
                   />
                   <span
@@ -129,7 +133,11 @@
                     :platform="g.platform as GroupPlatform"
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                     :rate-multiplier="g.rate_multiplier"
-                    :user-rate-multiplier="userGroupRates[g.id] ?? null"
+                    :personal-rate-multiplier="g.personal_rate_multiplier ?? null"
+                    :pro-rate-multiplier="g.pro_rate_multiplier ?? null"
+                    :effective-rate-multiplier="g.effective_rate_multiplier"
+                    :pro-only="g.pro_only"
+                    :pro-level-name="g.pro_level_name || ''"
                     always-show-rate
                   />
                   <span
@@ -195,22 +203,18 @@ const props = defineProps<{
   noPricingLabel: string
   noModelsLabel: string
   emptyLabel: string
-  /** 用户专属倍率（group_id → multiplier）；无专属时由 GroupBadge 仅显示默认倍率。 */
-  userGroupRates: Record<number, number>
 }>()
 
-// Suppress unused warning — props is accessed via template automatically but
-// the explicit reference here keeps the linter from flagging userGroupRates.
-void props.userGroupRates
+void props
 
 const { t } = useI18n()
 
 function exclusiveGroups(section: UserChannelPlatformSection): UserAvailableGroup[] {
-  return section.groups.filter((g) => g.is_exclusive)
+  return section.groups.filter((g) => g.is_exclusive || g.pro_only)
 }
 
 function publicGroups(section: UserChannelPlatformSection): UserAvailableGroup[] {
-  return section.groups.filter((g) => !g.is_exclusive)
+  return section.groups.filter((g) => !g.is_exclusive && !g.pro_only)
 }
 
 const appStore = useAppStore()

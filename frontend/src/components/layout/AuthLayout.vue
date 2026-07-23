@@ -1,88 +1,152 @@
 <template>
-  <div class="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
-    <!-- Background -->
-    <div
-      class="absolute inset-0 bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
-    ></div>
+  <div class="sub2-auth-shell dark" @pointermove="handlePointerMove">
+    <section class="sub2-auth-stage">
+      <div class="auth-pointer-glow"></div>
+      <div class="auth-grid"></div>
+      <div class="auth-particles"></div>
+      <div class="auth-scan"></div>
+      <div class="auth-aurora auth-aurora-one"></div>
+      <div class="auth-aurora auth-aurora-two"></div>
 
-    <!-- Decorative Elements -->
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <!-- Gradient Orbs -->
-      <div
-        class="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-primary-400/20 blur-3xl"
-      ></div>
-      <div
-        class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary-500/15 blur-3xl"
-      ></div>
-      <div
-        class="absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-300/10 blur-3xl"
-      ></div>
+      <header class="sub2-auth-header">
+        <router-link to="/" class="sub2-auth-brand">
+          <span class="sub2-auth-logo">
+            <img :src="siteLogo || '/logo.png'" alt="" />
+          </span>
+          <span>{{ siteName }}</span>
+        </router-link>
+        <div class="sub2-auth-toolbar">
+          <LocaleSwitcher />
+          <button type="button" class="auth-tool-button" :aria-label="isDark ? 'Light theme' : 'Dark theme'" @click="toggleTheme">
+            <Icon :name="isDark ? 'sun' : 'moon'" size="sm" />
+          </button>
+        </div>
+      </header>
 
-      <!-- Grid Pattern -->
-      <div
-        class="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"
-      ></div>
-    </div>
-
-    <!-- Content Container -->
-    <div class="relative z-10 w-full max-w-md">
-      <!-- Logo/Brand -->
-      <div class="mb-8 text-center">
-        <!-- Custom Logo or Default Logo -->
-        <template v-if="settingsLoaded">
-          <div
-            class="mb-4 inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-primary-500/30"
-          >
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
+      <div class="sub2-auth-content">
+        <section class="auth-gateway-visual" aria-hidden="true">
+          <div class="auth-gateway-copy">
+            <span class="auth-gateway-eyebrow">{{ t('auth.gatewayEyebrow') }}</span>
+            <h1>
+              {{ t('auth.gatewayTitle') }}
+              <span>{{ t('auth.gatewayTitleAccent') }}</span>
+            </h1>
+            <p>{{ t('auth.gatewayDescription') }}</p>
+            <div class="auth-value-list">
+              <div v-for="item in valueItems" :key="item.title" class="auth-value-item">
+                <span class="auth-value-icon"><Icon :name="item.icon" size="sm" /></span>
+                <span>
+                  <strong>{{ item.title }}</strong>
+                  <small>{{ item.detail }}</small>
+                </span>
+              </div>
+            </div>
           </div>
-          <h1 class="text-gradient mb-2 text-3xl font-bold">
-            {{ siteName }}
-          </h1>
-          <p class="text-sm text-gray-500 dark:text-dark-400">
-            {{ siteSubtitle }}
-          </p>
-        </template>
-      </div>
 
-      <!-- Card Container -->
-      <div class="card-glass rounded-2xl p-8 shadow-glass">
-        <slot />
-      </div>
+          <div class="auth-network">
+            <img
+              class="auth-core-asset"
+              src="/assets/auth/omnio-core-orbit.webp?v=2"
+              alt=""
+              width="1000"
+              height="1000"
+              fetchpriority="high"
+            />
+            <svg class="auth-network-routes" viewBox="0 0 600 600" fill="none">
+              <path
+                v-for="(path, index) in routePaths"
+                :key="path"
+                :d="path"
+                class="auth-route-line"
+                :style="{ animationDelay: `${index * -0.38}s` }"
+              />
+            </svg>
+            <div class="auth-network-core">
+              <img src="/assets/brand/omnio-mark.svg?v=3" alt="" />
+              <strong>{{ siteName }}</strong>
+              <span>{{ t('auth.gatewayEyebrow') }}</span>
+            </div>
+            <div
+              v-for="node in modelNodes"
+              :key="node.label"
+              class="auth-model-node"
+              :style="{ left: node.left, top: node.top, animationDelay: node.delay }"
+            >
+              <span class="auth-model-mark">
+                <ModelIcon :model="node.iconModel" size="22px" />
+              </span>
+              <span><strong>{{ node.label }}</strong><small>{{ node.provider }}</small></span>
+            </div>
+          </div>
+        </section>
 
-      <!-- Footer Links -->
-      <div class="mt-6 text-center text-sm">
-        <slot name="footer" />
+        <div class="sub2-auth-card-column">
+          <div class="sub2-auth-card">
+            <slot />
+            <div class="sub2-auth-footer"><slot name="footer" /></div>
+          </div>
+        </div>
       </div>
-
-      <!-- Copyright -->
-      <div class="mt-8 text-center text-xs text-gray-400 dark:text-dark-500">
-        &copy; {{ currentYear }} {{ siteName }}. All rights reserved.
-      </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 import { sanitizeUrl } from '@/utils/url'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import ModelIcon from '@/components/common/ModelIcon.vue'
+import Icon from '@/components/icons/Icon.vue'
 
 const appStore = useAppStore()
+const { t } = useI18n()
+const isDark = ref(document.documentElement.classList.contains('dark'))
 
 const siteName = computed(() => appStore.siteName || 'Sub2API')
 const siteLogo = computed(() => sanitizeUrl(appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
-const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'Subscription to API Conversion Platform')
-const settingsLoaded = computed(() => appStore.publicSettingsLoaded)
 
-const currentYear = computed(() => new Date().getFullYear())
+const valueItems = computed(() => [
+  { icon: 'terminal' as const, title: t('auth.gatewayUnified'), detail: t('auth.gatewayUnifiedDetail') },
+  { icon: 'chart' as const, title: t('auth.gatewayRouting'), detail: t('auth.gatewayRoutingDetail') },
+  { icon: 'shield' as const, title: t('auth.gatewayReliable'), detail: t('auth.gatewayReliableDetail') }
+])
+
+const modelNodes = [
+  { iconModel: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', provider: 'OpenAI', left: '50%', top: '6%', delay: '0s' },
+  { iconModel: 'claude-fable-5', label: 'Claude Fable 5', provider: 'Anthropic', left: '84%', top: '25%', delay: '-.7s' },
+  { iconModel: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', provider: 'Google', left: '91%', top: '55%', delay: '-1.4s' },
+  { iconModel: 'grok-4.5', label: 'Grok 4.5', provider: 'xAI', left: '78%', top: '84%', delay: '-2.1s' },
+  { iconModel: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'DeepSeek', left: '48%', top: '94%', delay: '-2.8s' },
+  { iconModel: 'qwen3.7-max', label: 'Qwen3.7 Max', provider: 'Alibaba', left: '9%', top: '57%', delay: '-3.5s' },
+  { iconModel: 'openrouter', label: '100+', provider: 'Models', left: '17%', top: '24%', delay: '-4.2s' }
+]
+
+const routePaths = [
+  'M300 300 C300 210 300 110 300 42',
+  'M300 300 C390 260 470 185 505 150',
+  'M300 300 C410 300 510 320 548 330',
+  'M300 300 C390 365 455 455 468 504',
+  'M300 300 C300 395 288 505 288 564',
+  'M300 300 C205 320 105 340 54 342',
+  'M300 300 C215 245 135 180 102 144'
+]
+
+function handlePointerMove(event: PointerEvent) {
+  if (event.pointerType === 'touch') return
+  const target = event.currentTarget as HTMLElement
+  target.style.setProperty('--auth-pointer-x', `${event.clientX}px`)
+  target.style.setProperty('--auth-pointer-y', `${event.clientY}px`)
+}
+
+function toggleTheme() {
+  isDark.value = !isDark.value
+  document.documentElement.classList.toggle('dark', isDark.value)
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+}
 
 onMounted(() => {
   appStore.fetchPublicSettings()
 })
 </script>
-
-<style scoped>
-.text-gradient {
-  @apply bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent;
-}
-</style>

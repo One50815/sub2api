@@ -30,6 +30,7 @@ type UserSubscription struct {
 	User           *User
 	Group          *Group
 	AssignedByUser *User
+	Entitlement    *SubscriptionEntitlement
 }
 
 func (s *UserSubscription) IsActive() bool {
@@ -115,24 +116,27 @@ func (s *UserSubscription) MonthlyResetTime() *time.Time {
 }
 
 func (s *UserSubscription) CheckDailyLimit(group *Group, additionalCost float64) bool {
-	if !group.HasDailyLimit() {
+	limit := s.effectiveLimit(group, "daily")
+	if limit == nil || *limit <= 0 {
 		return true
 	}
-	return s.DailyUsageUSD+additionalCost <= *group.DailyLimitUSD
+	return s.DailyUsageUSD+additionalCost <= *limit
 }
 
 func (s *UserSubscription) CheckWeeklyLimit(group *Group, additionalCost float64) bool {
-	if !group.HasWeeklyLimit() {
+	limit := s.effectiveLimit(group, "weekly")
+	if limit == nil || *limit <= 0 {
 		return true
 	}
-	return s.WeeklyUsageUSD+additionalCost <= *group.WeeklyLimitUSD
+	return s.WeeklyUsageUSD+additionalCost <= *limit
 }
 
 func (s *UserSubscription) CheckMonthlyLimit(group *Group, additionalCost float64) bool {
-	if !group.HasMonthlyLimit() {
+	limit := s.effectiveLimit(group, "monthly")
+	if limit == nil || *limit <= 0 {
 		return true
 	}
-	return s.MonthlyUsageUSD+additionalCost <= *group.MonthlyLimitUSD
+	return s.MonthlyUsageUSD+additionalCost <= *limit
 }
 
 func (s *UserSubscription) CheckAllLimits(group *Group, additionalCost float64) (daily, weekly, monthly bool) {
@@ -140,4 +144,36 @@ func (s *UserSubscription) CheckAllLimits(group *Group, additionalCost float64) 
 	weekly = s.CheckWeeklyLimit(group, additionalCost)
 	monthly = s.CheckMonthlyLimit(group, additionalCost)
 	return
+}
+
+func (s *UserSubscription) effectiveLimit(group *Group, window string) *float64 {
+	if s != nil && s.Entitlement != nil {
+		switch window {
+		case "daily":
+			return s.Entitlement.DailyLimitUSD
+		case "weekly":
+			return s.Entitlement.WeeklyLimitUSD
+		case "monthly":
+			return s.Entitlement.MonthlyLimitUSD
+		}
+	}
+	if group == nil {
+		return nil
+	}
+	switch window {
+	case "daily":
+		return group.DailyLimitUSD
+	case "weekly":
+		return group.WeeklyLimitUSD
+	default:
+		return group.MonthlyLimitUSD
+	}
+}
+
+func (s *UserSubscription) UsesWalletAfterQuota(group *Group) bool {
+	if s == nil || s.Entitlement == nil || s.Entitlement.OveragePolicy != SubscriptionOverageWallet {
+		return false
+	}
+	daily, weekly, monthly := s.CheckAllLimits(group, 0)
+	return !daily || !weekly || !monthly
 }

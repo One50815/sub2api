@@ -1,9 +1,14 @@
 <template>
-  <section class="py-3 md:py-4">
-    <div class="flex items-center justify-end gap-3 flex-wrap">
+  <section class="page-header py-1 md:py-2">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="min-w-0">
+        <h1 class="page-title">{{ t('channelStatus.title') }}</h1>
+        <p class="page-description mt-1 text-sm">{{ t('channelStatus.description') }}</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
       <div
         role="tablist"
-        class="inline-flex p-0.5 rounded-xl bg-gray-100 dark:bg-dark-800 border border-gray-200/60 dark:border-dark-700/60 text-xs"
+        class="tabs inline-flex p-0.5 text-xs"
       >
         <button
           v-for="opt in windowOptions"
@@ -11,7 +16,7 @@
           type="button"
           role="tab"
           :aria-selected="window === opt.value"
-          class="px-3 py-1 rounded-lg transition-colors"
+          class="tab px-3 py-1 transition-colors"
           :class="window === opt.value
             ? 'bg-white dark:bg-dark-700 shadow-sm text-gray-900 dark:text-white font-semibold'
             : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
@@ -34,7 +39,7 @@
 
       <button
         type="button"
-        class="h-8 w-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-dark-700 transition-colors disabled:opacity-50"
+        class="btn btn-icon btn-sm text-gray-500 disabled:opacity-50 dark:text-gray-400"
         :disabled="loading"
         :title="t('common.refresh')"
         @click="emit('refresh')"
@@ -51,6 +56,7 @@
         @update:enabled="autoRefresh.setEnabled"
         @update:interval="autoRefresh.setInterval"
       />
+      </div>
     </div>
   </section>
 </template>

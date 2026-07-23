@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"strings"
+	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
@@ -179,12 +181,28 @@ func (r *usageBillingRepository) applyUsageBillingEffects(ctx context.Context, t
 	}
 
 	if cmd.BalanceCost > 0 {
-		newBalance, sufficient, err := deductUsageBillingBalance(ctx, tx, cmd.UserID, cmd.BalanceCost)
-		if err != nil {
-			return err
+		walletCost := cmd.BalanceCost
+		if cmd.GroupID > 0 {
+			allocation, err := allocateOmnioProFreeQuota(ctx, tx, cmd)
+			if err != nil {
+				return err
+			}
+			walletCost = allocation.WalletCost
+			if allocation.Applied {
+				result.OmnioProFreeCost = allocation.FreeCost
+				result.OmnioProDailyUsed = allocation.DailyUsed
+				result.OmnioProMonthlyUsed = allocation.MonthlyUsed
+			}
 		}
-		result.NewBalance = &newBalance
-		result.BalanceOverdrafted = !sufficient
+		result.WalletCost = &walletCost
+		if walletCost > 0 {
+			newBalance, sufficient, err := deductUsageBillingBalance(ctx, tx, cmd.UserID, walletCost)
+			if err != nil {
+				return err
+			}
+			result.NewBalance = &newBalance
+			result.BalanceOverdrafted = !sufficient
+		}
 	}
 
 	if cmd.APIKeyQuotaCost > 0 {
@@ -210,6 +228,162 @@ func (r *usageBillingRepository) applyUsageBillingEffects(ctx context.Context, t
 	}
 
 	return nil
+}
+
+type omnioProQuotaAllocation struct {
+	Applied     bool
+	FreeCost    float64
+	WalletCost  float64
+	DailyUsed   float64
+	MonthlyUsed float64
+}
+
+func allocateOmnioProFreeQuota(
+	ctx context.Context,
+	tx *sql.Tx,
+	cmd *service.UsageBillingCommand,
+) (omnioProQuotaAllocation, error) {
+	allocation := omnioProQuotaAllocation{}
+	if cmd == nil {
+		return allocation, nil
+	}
+	allocation.WalletCost = cmd.BalanceCost
+	if cmd.BalanceCost <= 0 || cmd.UserID <= 0 || cmd.GroupID <= 0 {
+		return allocation, nil
+	}
+
+	var dailyLimit, monthlyLimit sql.NullFloat64
+	err := tx.QueryRowContext(ctx, `
+		SELECT s.daily_free_usd, s.monthly_free_usd
+		FROM omnio_pro_group_settings s
+		WHERE s.group_id = $2
+		  AND (COALESCE(s.daily_free_usd, 0) > 0 OR COALESCE(s.monthly_free_usd, 0) > 0)
+		  AND EXISTS (
+			SELECT 1
+			FROM user_membership_grants mg
+			JOIN membership_levels ml ON ml.id = mg.level_id AND ml.active = TRUE
+			WHERE mg.user_id = $1 AND mg.status = 'active'
+			  AND mg.starts_at <= NOW() AND mg.expires_at > NOW()
+		  )`,
+		cmd.UserID,
+		cmd.GroupID,
+	).Scan(&dailyLimit, &monthlyLimit)
+	if errors.Is(err, sql.ErrNoRows) {
+		return allocation, nil
+	}
+	if err != nil {
+		return allocation, err
+	}
+
+	var currentDay, currentMonth time.Time
+	if err := tx.QueryRowContext(ctx, `
+		SELECT
+			(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE,
+			date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE`,
+	).Scan(&currentDay, &currentMonth); err != nil {
+		return allocation, err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO omnio_pro_quota_usage (
+			user_id, group_id, daily_window_start, monthly_window_start
+		)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id, group_id) DO NOTHING`,
+		cmd.UserID,
+		cmd.GroupID,
+		currentDay,
+		currentMonth,
+	); err != nil {
+		return allocation, err
+	}
+
+	var storedDay, storedMonth time.Time
+	var dailyUsed, monthlyUsed float64
+	if err := tx.QueryRowContext(ctx, `
+		SELECT daily_window_start, monthly_window_start, daily_used_usd, monthly_used_usd
+		FROM omnio_pro_quota_usage
+		WHERE user_id = $1 AND group_id = $2
+		FOR UPDATE`,
+		cmd.UserID,
+		cmd.GroupID,
+	).Scan(&storedDay, &storedMonth, &dailyUsed, &monthlyUsed); err != nil {
+		return allocation, err
+	}
+
+	if storedDay.Format("2006-01-02") != currentDay.Format("2006-01-02") {
+		dailyUsed = 0
+	}
+	if storedMonth.Format("2006-01") != currentMonth.Format("2006-01") {
+		monthlyUsed = 0
+	}
+
+	available := math.Inf(1)
+	hasLimit := false
+	if dailyLimit.Valid && dailyLimit.Float64 > 0 {
+		available = math.Min(available, math.Max(0, dailyLimit.Float64-dailyUsed))
+		hasLimit = true
+	}
+	if monthlyLimit.Valid && monthlyLimit.Float64 > 0 {
+		available = math.Min(available, math.Max(0, monthlyLimit.Float64-monthlyUsed))
+		hasLimit = true
+	}
+	if !hasLimit {
+		return allocation, nil
+	}
+
+	freeCost := math.Min(cmd.BalanceCost, available)
+	if freeCost < 0.0000000001 {
+		freeCost = 0
+	}
+	walletCost := cmd.BalanceCost - freeCost
+	if walletCost < 0.0000000001 {
+		walletCost = 0
+	}
+	dailyUsed += freeCost
+	monthlyUsed += freeCost
+
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE omnio_pro_quota_usage
+		SET daily_window_start = $3,
+			monthly_window_start = $4,
+			daily_used_usd = $5,
+			monthly_used_usd = $6,
+			updated_at = NOW()
+		WHERE user_id = $1 AND group_id = $2`,
+		cmd.UserID,
+		cmd.GroupID,
+		currentDay,
+		currentMonth,
+		dailyUsed,
+		monthlyUsed,
+	); err != nil {
+		return allocation, err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO omnio_pro_quota_events (
+			request_id, api_key_id, user_id, group_id,
+			total_cost_usd, free_cost_usd, wallet_cost_usd
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		cmd.RequestID,
+		cmd.APIKeyID,
+		cmd.UserID,
+		cmd.GroupID,
+		cmd.BalanceCost,
+		freeCost,
+		walletCost,
+	); err != nil {
+		return allocation, err
+	}
+
+	allocation.Applied = true
+	allocation.FreeCost = freeCost
+	allocation.WalletCost = walletCost
+	allocation.DailyUsed = dailyUsed
+	allocation.MonthlyUsed = monthlyUsed
+	return allocation, nil
 }
 
 func incrementUsageBillingSubscription(ctx context.Context, tx *sql.Tx, subscriptionID int64, costUSD float64) error {

@@ -45,6 +45,10 @@ vi.mock('vue-i18n', () => ({
   }),
 }))
 
+vi.mock('@/components/common/LocaleSwitcher.vue', () => ({
+  default: { template: '<span />' },
+}))
+
 vi.mock('@/stores', () => ({
   useAuthStore: () => ({
     setToken: (...args: any[]) => setTokenMock(...args),
@@ -52,6 +56,7 @@ vi.mock('@/stores', () => ({
   useAppStore: () => ({
     showError: (...args: any[]) => showErrorMock(...args),
     showSuccess: (...args: any[]) => showSuccessMock(...args),
+    fetchPublicSettings: vi.fn(),
   }),
 }))
 
@@ -178,7 +183,7 @@ describe('OAuthCallbackView', () => {
     await passwordInputs[1].setValue('secret-123')
     const invitationInput = wrapper.find('input[type="text"]')
     await invitationInput.setValue('INVITE456')
-    await wrapper.findAll('button').at(0)?.trigger('click')
+    await wrapper.find('button.oauth-primary-action').trigger('click')
 
     expect(apiPostMock).toHaveBeenCalledWith('/auth/oauth/google/complete-registration', {
       password: 'secret-123',
@@ -215,7 +220,7 @@ describe('OAuthCallbackView', () => {
     const passwordInputs = wrapper.findAll('input[type="password"]')
     await passwordInputs[0].setValue('secret-456')
     await passwordInputs[1].setValue('secret-456')
-    await wrapper.findAll('button').at(0)?.trigger('click')
+    await wrapper.find('button.oauth-primary-action').trigger('click')
 
     expect(apiPostMock).toHaveBeenCalledWith('/auth/oauth/github/complete-registration', {
       password: 'secret-456',

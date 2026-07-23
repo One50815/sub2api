@@ -2,11 +2,14 @@
   <AppLayout>
     <div class="space-y-4">
       <!-- Actions -->
-      <div class="flex items-center justify-end gap-2">
-        <button @click="loadPlans" :disabled="plansLoading" class="btn btn-secondary" :title="t('common.refresh')">
-          <Icon name="refresh" size="md" :class="plansLoading ? 'animate-spin' : ''" />
-        </button>
-        <button @click="openPlanEdit(null)" class="btn btn-primary">{{ t('payment.admin.createPlan') }}</button>
+      <div class="page-header flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <h1 class="page-title">{{ t('nav.paymentPlans') }}</h1>
+        <div class="flex items-center justify-end gap-2">
+          <button @click="loadPlans" :disabled="plansLoading" class="btn btn-secondary" :title="t('common.refresh')">
+            <Icon name="refresh" size="md" :class="plansLoading ? 'animate-spin' : ''" />
+          </button>
+          <button @click="openPlanEdit(null)" class="btn btn-primary">{{ t('payment.admin.createPlan') }}</button>
+        </div>
       </div>
 
       <!-- Plans Table -->

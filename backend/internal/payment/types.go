@@ -41,6 +41,7 @@ const (
 const (
 	OrderTypeBalance      = "balance"
 	OrderTypeSubscription = "subscription"
+	OrderTypeMembership   = "membership"
 )
 
 // Entity statuses shared across users, groups, etc.
@@ -52,6 +53,7 @@ const (
 const (
 	DeductionTypeBalance      = "balance"
 	DeductionTypeSubscription = "subscription"
+	DeductionTypeMembership   = "membership"
 	DeductionTypeNone         = "none"
 )
 

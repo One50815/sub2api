@@ -1,645 +1,310 @@
 <template>
-  <!-- Custom Home Content: Full Page Mode -->
   <div v-if="homeContent" class="min-h-screen">
-    <!-- iframe mode -->
     <iframe
       v-if="isHomeContentUrl"
       :src="homeContent.trim()"
       class="h-screen w-full border-0"
       allowfullscreen
     ></iframe>
-    <!-- HTML mode - SECURITY: homeContent is admin-only setting, XSS risk is acceptable -->
     <div v-else v-html="homeContent"></div>
   </div>
 
-  <!-- Default Home Page -->
-  <div
-    v-else
-    class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
-  >
-    <!-- Background Decorations -->
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        class="absolute -right-40 -top-40 h-96 w-96 rounded-full bg-primary-400/20 blur-3xl"
-      ></div>
-      <div
-        class="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-primary-500/15 blur-3xl"
-      ></div>
-      <div
-        class="absolute left-1/3 top-1/4 h-72 w-72 rounded-full bg-primary-300/10 blur-3xl"
-      ></div>
-      <div
-        class="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-primary-400/10 blur-3xl"
-      ></div>
-      <div
-        class="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"
-      ></div>
-    </div>
+  <div v-else class="omnio-public-shell dark">
+    <header :class="['omnio-public-header', { 'is-scrolled': headerScrolled }]">
+      <nav class="omnio-public-nav" :aria-label="t('homeReplica.primaryNavigation')">
+        <router-link to="/home" class="omnio-public-brand">
+          <img :src="siteLogo || '/assets/brand/omnio-mark.svg?v=3'" alt="" />
+          <span>{{ siteName }}</span>
+        </router-link>
 
-    <!-- Header -->
-    <header class="relative z-20 px-6 py-4">
-      <nav class="mx-auto flex max-w-6xl items-center justify-between">
-        <!-- Logo -->
-        <div class="flex items-center">
-          <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
-          </div>
+        <div class="omnio-public-links">
+          <router-link to="/home">{{ t('nav.home') }}</router-link>
+          <router-link :to="dashboardPath">{{ t('nav.console') }}</router-link>
+          <a href="/docs/pricing/">{{ t('homeReplica.pricing') }}</a>
+          <a href="/docs/usage-guide/">{{ t('homeReplica.tutorial') }}</a>
+          <a v-if="docUrl" :href="docUrl" target="_blank" rel="noopener noreferrer">{{ t('home.docs') }}</a>
+          <router-link v-else to="/key-usage">{{ t('home.docs') }}</router-link>
+          <a href="/docs/about-omnio/">{{ t('homeReplica.about') }}</a>
         </div>
 
-        <!-- Nav Actions -->
-        <div class="flex items-center gap-3">
-          <!-- Language Switcher -->
+        <div class="omnio-public-actions">
           <LocaleSwitcher />
-
-          <!-- Doc Link -->
-          <a
-            v-if="docUrl"
-            :href="docUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
-            :title="t('home.viewDocs')"
-          >
-            <Icon name="book" size="md" />
-          </a>
-
-          <!-- Theme Toggle -->
-          <button
-            @click="toggleTheme"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
-            :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
-          >
-            <Icon v-if="isDark" name="sun" size="md" />
-            <Icon v-else name="moon" size="md" />
+          <button type="button" class="omnio-header-icon" :title="isDark ? t('home.switchToLight') : t('home.switchToDark')" @click="toggleTheme">
+            <Icon :name="isDark ? 'sun' : 'moon'" size="sm" />
           </button>
-
-          <!-- Login / Dashboard Button -->
-          <router-link
-            v-if="isAuthenticated"
-            :to="dashboardPath"
-            class="inline-flex items-center gap-1.5 rounded-full bg-gray-900 py-1 pl-1 pr-2.5 transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            <span
-              class="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-primary-600 text-[10px] font-semibold text-white"
-            >
-              {{ userInitial }}
-            </span>
-            <span class="text-xs font-medium text-white">{{ t('home.dashboard') }}</span>
-            <svg
-              class="h-3 w-3 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"
-              />
-            </svg>
+          <button v-if="isAuthenticated" type="button" class="omnio-header-icon" :title="t('homeReplica.notifications')">
+            <Icon name="bell" size="sm" />
+          </button>
+          <router-link v-if="isAuthenticated" :to="dashboardPath" class="omnio-profile-avatar" :aria-label="t('home.goToDashboard')">
+            {{ profileInitial }}
           </router-link>
-          <router-link
-            v-else
-            to="/login"
-            class="inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
+          <router-link v-else to="/login" class="omnio-header-cta">
             {{ t('home.login') }}
           </router-link>
+          <button type="button" class="omnio-mobile-menu-button" :aria-expanded="mobileOpen" :aria-label="t('homeReplica.toggleNavigation')" @click="mobileOpen = !mobileOpen"><Icon :name="mobileOpen ? 'x' : 'menu'" size="sm" /></button>
         </div>
       </nav>
+      <div v-if="mobileOpen" class="omnio-mobile-menu">
+        <router-link to="/home" @click="mobileOpen = false">{{ t('nav.home') }}</router-link>
+        <router-link :to="dashboardPath" @click="mobileOpen = false">{{ t('nav.console') }}</router-link>
+        <a href="/docs/pricing/" @click="mobileOpen = false">{{ t('homeReplica.pricing') }}</a>
+        <a href="/docs/usage-guide/" @click="mobileOpen = false">{{ t('homeReplica.tutorial') }}</a>
+        <a v-if="docUrl" :href="docUrl" target="_blank" rel="noopener noreferrer">{{ t('home.docs') }}</a>
+        <router-link v-else to="/key-usage" @click="mobileOpen = false">{{ t('home.docs') }}</router-link>
+        <a href="/docs/about-omnio/" @click="mobileOpen = false">{{ t('homeReplica.about') }}</a>
+      </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="relative z-10 flex-1 px-6 py-16">
-      <div class="mx-auto max-w-6xl">
-        <!-- Hero Section - Left/Right Layout -->
-        <div class="mb-12 flex flex-col items-center justify-between gap-12 lg:flex-row lg:gap-16">
-          <!-- Left: Text Content -->
-          <div class="flex-1 text-center lg:text-left">
-            <h1
-              class="mb-4 text-4xl font-bold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
-            >
-              {{ siteName }}
+    <main class="suno-replica-shell">
+      <section class="suno-replica-hero">
+        <div class="suno-replica-hero-aura"></div>
+        <div class="suno-replica-grain"></div>
+
+        <article class="suno-hero-side-card suno-hero-side-card-left">
+          <div class="suno-model-art-card suno-model-art-cyan">
+            <img :src="models[0].artwork" alt="" class="suno-model-art-image" />
+            <div class="suno-model-art-overlay"></div>
+            <div class="suno-model-art-content">
+              <div class="suno-model-art-meta"><span class="suno-model-provider"><ModelIcon :model="models[0].name" size="18px" />{{ models[0].provider }}</span><span>● LIVE</span></div>
+              <div><small>{{ models[0].capability }}</small><h3>{{ models[0].name }}</h3><p><span>{{ models[0].route }}</span><span>{{ models[0].latency }}</span></p></div>
+            </div>
+          </div>
+        </article>
+        <article class="suno-hero-side-card suno-hero-side-card-right">
+          <div class="suno-model-art-card suno-model-art-violet">
+            <img :src="models[2].artwork" alt="" class="suno-model-art-image" />
+            <div class="suno-model-art-overlay"></div>
+            <div class="suno-model-art-content">
+              <div class="suno-model-art-meta"><span class="suno-model-provider"><ModelIcon :model="models[2].name" size="18px" />{{ models[2].provider }}</span><span>● LIVE</span></div>
+              <div><small>{{ models[2].capability }}</small><h3>{{ models[2].name }}</h3><p><span>{{ models[2].route }}</span><span>{{ models[2].latency }}</span></p></div>
+            </div>
+          </div>
+        </article>
+
+        <div class="suno-hero-content">
+          <div class="suno-headline-frame">
+            <h1 class="suno-replica-hero-title" :key="headlineIndex">
+              {{ headlines[headlineIndex] }}<span class="suno-type-caret" aria-hidden="true"></span>
             </h1>
-            <p class="mb-8 text-lg text-gray-600 dark:text-dark-300 md:text-xl">
-              {{ siteSubtitle }}
-            </p>
+          </div>
+          <p class="suno-hero-copy">{{ t('homeReplica.heroCopy', { brand: siteName }) }}</p>
 
-            <!-- CTA Button -->
-            <div>
-              <router-link
-                :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
-              >
-                {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
-                <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
-              </router-link>
+          <div class="suno-gateway-quickstart">
+            <div class="suno-quickstart-header">
+              <div><span class="suno-quickstart-eyebrow">{{ t('homeReplica.quickstart') }}</span><strong>{{ siteName }} API</strong></div>
+              <span class="suno-quickstart-status">● {{ t('homeReplica.gatewayOnline') }}</span>
+            </div>
+            <div class="suno-quickstart-endpoint">
+              <code>{{ gatewayOrigin }}/v1</code>
+              <button type="button" @click="copyText(`${gatewayOrigin}/v1`)"><Icon name="copy" size="xs" /><span>{{ t('common.copy') }}</span></button>
+            </div>
+            <div class="suno-quickstart-tabs" role="tablist" :aria-label="t('homeReplica.sdk')">
+              <button v-for="snippet in snippets" :key="snippet.id" type="button" :data-active="activeSnippet === snippet.id" @click="activeSnippet = snippet.id">{{ snippet.label }}</button>
+            </div>
+            <div class="suno-quickstart-code">
+              <pre>{{ selectedSnippet.code }}</pre>
+              <button type="button" @click="copyText(selectedSnippet.code)"><Icon name="copy" size="xs" /><span>{{ t('common.copy') }}</span></button>
+            </div>
+            <div class="suno-quickstart-actions">
+              <router-link to="/key-usage"><Icon name="book" size="xs" />{{ t('homeReplica.readDocs') }}</router-link>
+              <router-link :to="isAuthenticated ? dashboardPath : '/register'" data-primary="true">{{ isAuthenticated ? t('home.goToDashboard') : t('homeReplica.getApiKey') }}<Icon name="arrowRight" size="xs" /></router-link>
             </div>
           </div>
+        </div>
 
-          <!-- Right: Terminal Animation -->
-          <div class="flex flex-1 justify-center lg:justify-end">
-            <div class="terminal-container">
-              <div class="terminal-window">
-                <!-- Window header -->
-                <div class="terminal-header">
-                  <div class="terminal-buttons">
-                    <span class="btn-close"></span>
-                    <span class="btn-minimize"></span>
-                    <span class="btn-maximize"></span>
-                  </div>
-                  <span class="terminal-title">terminal</span>
-                </div>
-                <!-- Terminal content -->
-                <div class="terminal-body">
-                  <div class="code-line line-1">
-                    <span class="code-prompt">$</span>
-                    <span class="code-cmd">curl</span>
-                    <span class="code-flag">-X POST</span>
-                    <span class="code-url">/v1/messages</span>
-                  </div>
-                  <div class="code-line line-2">
-                    <span class="code-comment"># Routing to upstream...</span>
-                  </div>
-                  <div class="code-line line-3">
-                    <span class="code-success">200 OK</span>
-                    <span class="code-response">{ "content": "Hello!" }</span>
-                  </div>
-                  <div class="code-line line-4">
-                    <span class="code-prompt">$</span>
-                    <span class="cursor"></span>
-                  </div>
-                </div>
+        <div class="suno-provider-rail" :aria-label="t('home.providers.title')">
+          <div class="suno-provider-rail-track">
+            <div v-for="(model, index) in railModels" :key="`${model.name}-${index}`" class="suno-provider-model">
+              <span class="suno-provider-model-icon"><ModelIcon :model="model.name" size="28px" /></span>
+              <span>{{ model.name }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="suno-showcase-section">
+        <div class="suno-section-heading">
+          <h2 class="suno-replica-section-title">{{ t('homeReplica.everyModel') }}</h2>
+          <p class="suno-replica-section-copy">{{ t('homeReplica.everyModelCopy') }}</p>
+        </div>
+        <div class="suno-showcase-viewport">
+          <div class="suno-model-showcase-track">
+            <article v-for="model in showcaseModels" :key="model.key" :class="['suno-model-art-card', `suno-model-art-${model.accent}`, 'suno-showcase-model-card']">
+              <img :src="model.artwork" alt="" class="suno-model-art-image" loading="lazy" />
+              <div class="suno-model-art-overlay"></div>
+              <div class="suno-model-art-content">
+                <div class="suno-model-art-meta"><span class="suno-model-provider"><ModelIcon :model="model.name" size="18px" />{{ model.provider }}</span><span>● LIVE</span></div>
+                <div><small>{{ model.capability }}</small><h3>{{ model.name }}</h3><p><span>{{ model.route }}</span><span>{{ model.latency }}</span></p></div>
               </div>
-            </div>
+            </article>
           </div>
         </div>
+      </section>
 
-        <!-- Feature Tags - Centered -->
-        <div class="mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
-          >
-            <Icon name="swap" size="sm" class="text-primary-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.subscriptionToApi')
-            }}</span>
-          </div>
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
-          >
-            <Icon name="shield" size="sm" class="text-primary-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.stickySession')
-            }}</span>
-          </div>
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
-          >
-            <Icon name="chart" size="sm" class="text-primary-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.realtimeBilling')
-            }}</span>
-          </div>
+      <section class="suno-feature-section">
+        <div class="suno-section-heading suno-section-heading-left">
+          <h2 class="suno-replica-section-title">{{ t('homeReplica.everything') }}</h2>
         </div>
-
-        <!-- Features Grid -->
-        <div class="mb-12 grid gap-6 md:grid-cols-3">
-          <!-- Feature 1: Unified Gateway -->
-          <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-110"
-            >
-              <Icon name="server" size="lg" class="text-white" />
+        <div class="suno-feature-grid">
+          <article v-for="(feature, index) in features" :key="feature.title" class="suno-feature-card">
+            <div><Icon :name="feature.icon" size="md" class="text-white/70" /><h3>{{ feature.title }}</h3><p>{{ feature.description }}</p></div>
+            <div v-if="index === 0" class="suno-feature-visual suno-feature-network">
+              <div v-for="model in models.slice(0, 4)" :key="model.name" class="suno-feature-model-row"><span class="suno-feature-model-icon"><ModelIcon :model="model.name" size="18px" /></span><span>{{ model.name }}</span><span class="ml-auto text-white/36">online</span></div>
             </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.unifiedGateway') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.unifiedGatewayDesc') }}
-            </p>
-          </div>
-
-          <!-- Feature 2: Account Pool -->
-          <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg shadow-primary-500/30 transition-transform group-hover:scale-110"
-            >
-              <svg
-                class="h-6 w-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-                />
-              </svg>
-            </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.multiAccount') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.multiAccountDesc') }}
-            </p>
-          </div>
-
-          <!-- Feature 3: Billing & Quota -->
-          <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/30 transition-transform group-hover:scale-110"
-            >
-              <svg
-                class="h-6 w-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"
-                />
-              </svg>
-            </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.balanceQuota') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.balanceQuotaDesc') }}
-            </p>
-          </div>
+            <div v-else-if="index === 1" class="suno-feature-visual suno-feature-bars"><span v-for="height in featureBars" :key="height" class="suno-feature-bar" :style="{ height: `${height}%` }"></span></div>
+            <div v-else-if="index === 2" class="suno-feature-visual suno-feature-network"><div v-for="row in policyRows" :key="row[0]" class="suno-feature-policy-row"><span>{{ row[0] }}</span><span class="text-emerald-300/75">{{ row[1] }}</span></div></div>
+            <div v-else-if="index === 3" class="suno-feature-visual suno-feature-failover"><p><span>primary_01</span><span>degraded</span></p><hr /><p><span>fallback_02</span><span>active · 38ms</span></p></div>
+            <div v-else-if="index === 4" class="suno-feature-visual suno-feature-cost"><div><small>{{ t('homeReplica.averageRequest') }}</small><strong>$0.0018</strong></div><span>-19.1%</span></div>
+            <div v-else class="suno-feature-visual suno-feature-routes"><span v-for="route in protocolRoutes" :key="route" class="suno-feature-route">{{ route }}</span></div>
+          </article>
         </div>
+      </section>
 
-        <!-- Supported Providers -->
-        <div class="mb-8 text-center">
-          <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
-            {{ t('home.providers.title') }}
-          </h2>
-          <p class="text-sm text-gray-600 dark:text-dark-400">
-            {{ t('home.providers.description') }}
-          </p>
+      <section class="suno-pricing-section">
+        <div class="suno-section-heading">
+          <h2 class="suno-replica-section-title">{{ t('homeReplica.flexiblePricing') }}</h2>
+          <p class="suno-replica-section-copy">{{ t('homeReplica.flexiblePricingCopy') }}</p>
+          <div class="suno-pricing-toggle"><button type="button" :data-active="billingMode === 'usage'" @click="billingMode = 'usage'">{{ t('homeReplica.usageBilling') }}</button><button type="button" :data-active="billingMode === 'pro'" @click="billingMode = 'pro'">Omnio Pro</button></div>
         </div>
+        <div class="suno-pricing-grid">
+          <article v-for="(plan, index) in plans" :key="plan.title" class="suno-pricing-card" :data-featured="(billingMode === 'usage' && index === 0) || (billingMode === 'pro' && index === 1)">
+            <div class="suno-plan-heading"><div><h3>{{ plan.title }}</h3><p>{{ plan.description }}</p></div><span v-if="plan.badge" class="suno-plan-badge">{{ plan.badge }}</span></div>
+            <div class="suno-plan-price">{{ plan.price }}</div>
+            <router-link :to="plan.to" class="suno-plan-button">{{ plan.action }}</router-link>
+            <ul><li v-for="item in plan.features" :key="item"><span class="suno-plan-check">✓</span>{{ item }}</li></ul>
+          </article>
+        </div>
+      </section>
 
-        <div class="mb-16 flex flex-wrap items-center justify-center gap-4">
-          <!-- Claude - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-500"
-            >
-              <span class="text-xs font-bold text-white">C</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.claude') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- GPT - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-green-600"
-            >
-              <span class="text-xs font-bold text-white">G</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">GPT</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- Gemini - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600"
-            >
-              <span class="text-xs font-bold text-white">G</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.gemini') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- Antigravity - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-600"
-            >
-              <span class="text-xs font-bold text-white">A</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.antigravity') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- More - Coming Soon -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200/50 bg-white/40 px-5 py-3 opacity-60 backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/40"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gray-500 to-gray-600"
-            >
-              <span class="text-xs font-bold text-white">+</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.more') }}</span>
-            <span
-              class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-dark-700 dark:text-dark-400"
-              >{{ t('home.providers.soon') }}</span
-            >
-          </div>
+      <section class="suno-trust-section">
+        <div class="suno-trust-aura"></div><div class="suno-replica-grain"></div>
+        <div class="suno-trust-content">
+          <h2 class="suno-replica-section-title">{{ t('homeReplica.builtLike') }} <span>{{ t('homeReplica.operatedLike') }}</span></h2>
+          <p class="suno-replica-section-copy">{{ t('homeReplica.intelligenceLayer') }}</p>
+          <div class="suno-trust-cards"><div><span>OpenAI-compatible</span><strong>1 API</strong><small>{{ t('homeReplica.protocolSurface') }}</small></div><div><span>{{ t('homeReplica.providers') }}</span><strong>40+</strong><small>{{ t('homeReplica.modelNetwork') }}</small></div></div>
         </div>
-      </div>
+      </section>
+
+      <section class="suno-explore-section">
+        <div class="suno-section-heading"><h2 class="suno-replica-section-title">{{ t('homeReplica.firstRequest') }} <span>{{ t('homeReplica.fullControl') }}</span></h2><p class="suno-replica-section-copy">{{ t('homeReplica.exploreCopy') }}</p></div>
+        <div class="suno-trace-rail">
+          <article v-for="model in models" :key="model.name" class="suno-trace-card"><div class="suno-trace-meta"><span>REQUEST TRACE</span><span>200</span></div><div class="suno-trace-pulse"><ModelIcon :model="model.name" size="68px" /></div><h3>{{ model.name }}</h3><p><span>{{ model.route }}</span><span>{{ model.latency }}</span></p></article>
+        </div>
+      </section>
+
+      <section class="suno-faq-section">
+        <div class="suno-section-heading"><h2 class="suno-replica-section-title">{{ t('homeReplica.faq') }}</h2><p class="suno-replica-section-copy">{{ t('homeReplica.faqCopy', { brand: siteName }) }}</p></div>
+        <div class="suno-faq-list"><div v-for="(faq, index) in faqs" :key="faq[0]" class="suno-faq-item" :data-open="openFaq === index"><button type="button" :aria-expanded="openFaq === index" @click="openFaq = openFaq === index ? null : index"><span>{{ faq[0] }}</span><span>＋</span></button><div v-show="openFaq === index"><p>{{ faq[1] }}</p></div></div></div>
+      </section>
+
+      <footer class="suno-home-footer">
+        <router-link :to="isAuthenticated ? dashboardPath : '/register'" class="suno-footer-cta">{{ isAuthenticated ? t('home.goToDashboard') : t('homeReplica.createGateway') }}<Icon name="arrowRight" size="xs" /></router-link>
+        <div class="suno-footer-grid"><div><div class="suno-brand-lockup"><img src="/assets/brand/omnio-mark.svg?v=3" alt="" /><strong>{{ siteName }}</strong></div><p>{{ t('homeReplica.intelligenceLayer') }}</p></div><div><h3>{{ t('homeReplica.product') }}</h3><router-link to="/key-usage">{{ t('homeReplica.modelPricing') }}</router-link><router-link to="/available-channels">{{ t('nav.availableChannels') }}</router-link><router-link :to="dashboardPath">{{ t('home.dashboard') }}</router-link></div><div><h3>{{ t('homeReplica.resources') }}</h3><a v-if="docUrl" :href="docUrl" target="_blank" rel="noopener noreferrer">{{ t('home.docs') }}</a><router-link to="/legal/user-agreement">{{ t('homeReplica.userAgreement') }}</router-link><router-link to="/login">{{ t('home.login') }}</router-link></div></div>
+        <div class="suno-footer-bottom"><span>© {{ currentYear }} {{ siteName }}</span><span class="suno-footer-attribution">{{ t('homeReplica.builtOnSub2api') }}</span></div>
+      </footer>
     </main>
-
-    <!-- Footer -->
-    <footer class="relative z-10 border-t border-gray-200/50 px-6 py-8 dark:border-dark-800/50">
-      <div
-        class="mx-auto flex max-w-6xl flex-col items-center justify-center gap-4 text-center sm:flex-row sm:text-left"
-      >
-        <p class="text-sm text-gray-500 dark:text-dark-400">
-          &copy; {{ currentYear }} {{ siteName }}. {{ t('home.footer.allRightsReserved') }}
-        </p>
-        <div class="flex items-center gap-4">
-          <a
-            v-if="docUrl"
-            :href="docUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >
-            {{ t('home.docs') }}
-          </a>
-          <a
-            :href="githubUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >
-            GitHub
-          </a>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
-import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import ModelIcon from '@/components/common/ModelIcon.vue'
 import { sanitizeUrl } from '@/utils/url'
 
-const { t } = useI18n()
+type SnippetId = 'curl' | 'python' | 'node'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const isDark = ref(document.documentElement.classList.contains('dark'))
+const headlineIndex = ref(0)
+const activeSnippet = ref<SnippetId>('curl')
+const billingMode = ref<'usage' | 'pro'>('usage')
+const openFaq = ref<number | null>(null)
+const headerScrolled = ref(false)
+const mobileOpen = ref(false)
+let headlineTimer: number | undefined
 
-// Site settings - directly from appStore (already initialized from injected config)
-const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
+const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Omnio')
 const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
-const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'AI API Gateway Platform')
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
-
-// Check if homeContent is a URL (for iframe display)
-const isHomeContentUrl = computed(() => {
-  const content = homeContent.value.trim()
-  return content.startsWith('http://') || content.startsWith('https://')
-})
-
-// Theme
-const isDark = ref(document.documentElement.classList.contains('dark'))
-
-// GitHub URL
-const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
-
-// Auth state
+const isHomeContentUrl = computed(() => /^https?:\/\//i.test(homeContent.value.trim()))
 const isAuthenticated = computed(() => authStore.isAuthenticated)
-const isAdmin = computed(() => authStore.isAdmin)
-const dashboardPath = computed(() => isAdmin.value ? '/admin/dashboard' : '/dashboard')
-const userInitial = computed(() => {
-  const user = authStore.user
-  if (!user || !user.email) return ''
-  return user.email.charAt(0).toUpperCase()
-})
+const dashboardPath = computed(() => authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
+const profileInitial = computed(() => (authStore.user?.username || authStore.user?.email || 'A').trim().charAt(0).toUpperCase())
+const currentYear = new Date().getFullYear()
+const gatewayOrigin = computed(() => typeof window === 'undefined' ? '' : window.location.origin)
 
-// Current year for footer
-const currentYear = computed(() => new Date().getFullYear())
+const headlines = computed(() => [t('homeReplica.headlineGateway'), t('homeReplica.headlineVisible'), t('homeReplica.headlineControl')])
+const models = computed(() => [
+  { name: 'GPT-5.6 Sol', provider: 'OpenAI', latency: '36ms', route: '/v1/responses', accent: 'cyan', artwork: '/assets/home/models/gpt-5-6-sol.jpg', capability: t('homeReplica.capabilityReasoning') },
+  { name: 'Claude Sonnet 5', provider: 'Anthropic', latency: '44ms', route: '/v1/messages', accent: 'amber', artwork: '/assets/home/models/claude-sonnet-5.jpg', capability: t('homeReplica.capabilityContext') },
+  { name: 'Gemini 3.5 Flash', provider: 'Google', latency: '29ms', route: '/v1beta/models', accent: 'violet', artwork: '/assets/home/models/gemini-3-5-flash.jpg', capability: t('homeReplica.capabilityMultimodal') },
+  { name: 'DeepSeek V4 Pro', provider: 'DeepSeek', latency: '32ms', route: '/v1/chat/completions', accent: 'teal', artwork: '/assets/home/models/deepseek-v4-pro.jpg', capability: t('homeReplica.capabilityEfficient') },
+  { name: 'Qwen3.7 Max', provider: 'Alibaba', latency: '34ms', route: '/v1/chat/completions', accent: 'jade', artwork: '/assets/home/models/qwen3-7-max.jpg', capability: t('homeReplica.capabilityMultilingual') }
+])
+const railModels = computed(() => [...models.value, ...models.value])
+const showcaseModels = computed(() => [...models.value, ...models.value.slice(0, 2)].map((model, index) => ({ ...model, key: `${index}-${model.name}` })))
+const snippets = computed(() => [
+  { id: 'curl' as const, label: 'cURL', code: `curl ${gatewayOrigin.value}/v1/chat/completions \\\n  -H "Authorization: Bearer $SUB2API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"gpt-5.6-sol","messages":[{"role":"user","content":"Hello"}]}'` },
+  { id: 'python' as const, label: 'Python', code: `from openai import OpenAI\nclient = OpenAI(base_url="${gatewayOrigin.value}/v1", api_key=SUB2API_KEY)\nclient.chat.completions.create(model="gpt-5.6-sol", messages=[{"role": "user", "content": "Hello"}])` },
+  { id: 'node' as const, label: 'Node', code: `const client = new OpenAI({ baseURL: '${gatewayOrigin.value}/v1', apiKey: process.env.SUB2API_KEY })\nawait client.chat.completions.create({ model: 'gpt-5.6-sol', messages: [{ role: 'user', content: 'Hello' }] })` }
+])
+const selectedSnippet = computed(() => snippets.value.find((snippet) => snippet.id === activeSnippet.value) || snippets.value[0])
+const features = computed(() => [
+  { icon: 'server' as const, title: t('homeReplica.modelNetwork'), description: t('homeReplica.modelNetworkCopy') },
+  { icon: 'chart' as const, title: t('homeReplica.requestVisible'), description: t('homeReplica.requestVisibleCopy') },
+  { icon: 'shield' as const, title: t('homeReplica.policySpeed'), description: t('homeReplica.policySpeedCopy') },
+  { icon: 'swap' as const, title: t('homeReplica.failover'), description: t('homeReplica.failoverCopy') },
+  { icon: 'dollar' as const, title: t('homeReplica.costSignal'), description: t('homeReplica.costSignalCopy') },
+  { icon: 'terminal' as const, title: t('homeReplica.protocolSurface'), description: t('homeReplica.protocolSurfaceCopy') }
+])
+const plans = computed(() => [
+  { title: t('homeReplica.usageBased'), description: t('homeReplica.usageBasedCopy'), price: t('homeReplica.payAsYouGo'), action: t('homeReplica.viewPricing'), to: '/key-usage', features: [t('homeReplica.perModelPricing'), t('homeReplica.noCommitment'), t('homeReplica.usageAnalytics'), t('homeReplica.automaticRouting')] },
+  { title: 'Omnio Pro', description: '独立倍率、专属分组和优先权益', price: t('homeReplica.monthlyPlans'), badge: t('homeReplica.mostPopular'), action: '查看 Omnio Pro', to: '/omnio-pro', features: [t('homeReplica.includedQuota'), 'Pro 专属倍率', 'Pro 专属分组', '优先支持'] },
+  { title: t('homeReplica.enterprise'), description: t('homeReplica.enterpriseCopy'), price: t('homeReplica.custom'), badge: t('homeReplica.tailored'), action: t('homeReplica.contactUs'), to: '/register', features: [t('homeReplica.customQuota'), t('homeReplica.rolesPermissions'), t('homeReplica.onboardingSupport'), t('homeReplica.customRouting')] }
+])
+const faqs = computed(() => [
+  [t('homeReplica.whatIs', { brand: siteName.value }), t('homeReplica.whatIsAnswer', { brand: siteName.value })],
+  [t('homeReplica.existingSdk'), t('homeReplica.existingSdkAnswer', { brand: siteName.value })],
+  [t('homeReplica.routingQuestion'), t('homeReplica.routingAnswer')],
+  [t('homeReplica.trackQuestion'), t('homeReplica.trackAnswer')]
+])
+const featureBars = [28, 46, 35, 66, 48, 80, 58, 94, 72, 86, 64, 98]
+const policyRows = [['model.access', 'ALLOW'], ['budget.limit', 'ACTIVE'], ['fallback.route', 'READY']]
+const protocolRoutes = ['/v1/chat', '/v1/responses', '/v1/messages', '/v1beta']
 
-// Toggle theme
 function toggleTheme() {
   isDark.value = !isDark.value
   document.documentElement.classList.toggle('dark', isDark.value)
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
 }
 
-// Initialize theme
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme')
-  if (
-    savedTheme === 'dark' ||
-    (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  ) {
-    isDark.value = true
-    document.documentElement.classList.add('dark')
-  }
+function updateHeaderState() {
+  headerScrolled.value = window.scrollY > 20
+}
+
+async function copyText(value: string) {
+  try { await navigator.clipboard.writeText(value) } catch { /* clipboard may be unavailable */ }
 }
 
 onMounted(() => {
-  initTheme()
-
-  // Check auth state
+  document.documentElement.classList.add('dark')
+  isDark.value = true
   authStore.checkAuth()
+  if (!appStore.publicSettingsLoaded) appStore.fetchPublicSettings()
+  updateHeaderState()
+  window.addEventListener('scroll', updateHeaderState, { passive: true })
+  headlineTimer = window.setInterval(() => { headlineIndex.value = (headlineIndex.value + 1) % headlines.value.length }, 3600)
+})
 
-  // Ensure public settings are loaded (will use cache if already loaded from injected config)
-  if (!appStore.publicSettingsLoaded) {
-    appStore.fetchPublicSettings()
-  }
+onBeforeUnmount(() => {
+  if (headlineTimer !== undefined) window.clearInterval(headlineTimer)
+  window.removeEventListener('scroll', updateHeaderState)
 })
 </script>
-
-<style scoped>
-/* Terminal Container */
-.terminal-container {
-  position: relative;
-  display: inline-block;
-}
-
-/* Terminal Window */
-.terminal-window {
-  width: 420px;
-  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-  border-radius: 14px;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg);
-  transition: transform 0.3s ease;
-}
-
-.terminal-window:hover {
-  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-4px);
-}
-
-/* Terminal Header */
-.terminal-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  background: rgba(30, 41, 59, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.terminal-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.terminal-buttons span {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.btn-close {
-  background: #ef4444;
-}
-.btn-minimize {
-  background: #eab308;
-}
-.btn-maximize {
-  background: #22c55e;
-}
-
-.terminal-title {
-  flex: 1;
-  text-align: center;
-  font-size: 12px;
-  font-family: ui-monospace, monospace;
-  color: #64748b;
-  margin-right: 52px;
-}
-
-/* Terminal Body */
-.terminal-body {
-  padding: 20px 24px;
-  font-family: ui-monospace, 'Fira Code', monospace;
-  font-size: 14px;
-  line-height: 2;
-}
-
-.code-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  opacity: 0;
-  animation: line-appear 0.5s ease forwards;
-}
-
-.line-1 {
-  animation-delay: 0.3s;
-}
-.line-2 {
-  animation-delay: 1s;
-}
-.line-3 {
-  animation-delay: 1.8s;
-}
-.line-4 {
-  animation-delay: 2.5s;
-}
-
-@keyframes line-appear {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.code-prompt {
-  color: #22c55e;
-  font-weight: bold;
-}
-.code-cmd {
-  color: #38bdf8;
-}
-.code-flag {
-  color: #a78bfa;
-}
-.code-url {
-  color: #14b8a6;
-}
-.code-comment {
-  color: #64748b;
-  font-style: italic;
-}
-.code-success {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.15);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-.code-response {
-  color: #fbbf24;
-}
-
-/* Blinking Cursor */
-.cursor {
-  display: inline-block;
-  width: 8px;
-  height: 16px;
-  background: #22c55e;
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-  0%,
-  50% {
-    opacity: 1;
-  }
-  51%,
-  100% {
-    opacity: 0;
-  }
-}
-
-/* Dark mode adjustments */
-:deep(.dark) .terminal-window {
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(20, 184, 166, 0.2),
-    0 0 40px rgba(20, 184, 166, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-</style>

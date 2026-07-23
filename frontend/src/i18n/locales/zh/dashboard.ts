@@ -815,6 +815,11 @@ export default {
   errors: {
     somethingWentWrong: '出错了',
     pageNotFound: '页面未找到',
+    pageNotFoundTitle: '糟糕，页面不存在！',
+    pageNotFoundLineOne: '您访问的页面似乎不存在，',
+    pageNotFoundLineTwo: '或者已经被移除。',
+    goBack: '返回上一页',
+    backToHome: '返回首页',
     unauthorized: '未授权',
     forbidden: '禁止访问',
     serverError: '服务器错误',

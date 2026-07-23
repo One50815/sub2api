@@ -1,13 +1,13 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4 sm:space-y-5">
     <section
       data-testid="profile-overview-hero"
-      class="card overflow-hidden border border-primary-100/80 bg-gradient-to-br from-primary-50 via-white to-amber-50/70 dark:border-primary-900/40 dark:from-primary-950/40 dark:via-dark-900 dark:to-dark-950"
+      class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-700 dark:bg-dark-800"
     >
-      <div class="px-6 py-6 md:px-8">
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div class="p-3 sm:p-5">
+        <div class="flex items-center gap-3 text-left sm:gap-4">
           <div
-            class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary-500 to-primary-600 text-2xl font-bold text-white shadow-lg shadow-primary-500/20"
+            class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-900 text-sm font-semibold text-white ring-2 ring-white dark:bg-gray-100 dark:text-gray-900 dark:ring-dark-800 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-lg sm:ring-4"
           >
             <img
               v-if="avatarUrl"
@@ -18,10 +18,9 @@
             <span v-else>{{ avatarInitial }}</span>
           </div>
 
-          <div class="min-w-0 flex-1 space-y-5">
-            <div class="space-y-3">
-              <div class="flex flex-wrap items-center gap-2">
-                <h2 class="truncate text-2xl font-semibold text-gray-900 dark:text-white">
+          <div class="min-w-0 flex-1 space-y-1.5 sm:space-y-3">
+              <div class="flex min-w-0 items-center gap-2">
+                <h2 class="truncate text-xl font-semibold tracking-tight text-gray-950 dark:text-white sm:text-2xl">
                   {{ displayName }}
                 </h2>
                 <span :class="['badge', user?.role === 'admin' ? 'badge-primary' : 'badge-gray']">
@@ -38,75 +37,88 @@
                 </span>
               </div>
 
-              <div class="space-y-1">
-                <p class="truncate text-sm text-gray-600 dark:text-gray-300">
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400 sm:gap-x-3 sm:text-sm">
+                <p v-if="primaryEmailDisplay" class="truncate">
                   {{ primaryEmailDisplay }}
                 </p>
-                <div
+                <template
                   v-if="sourceHints.length"
-                  class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400"
                 >
                   <span
                     v-for="hint in sourceHints"
                     :key="hint.key"
-                    class="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 ring-1 ring-primary-100 dark:bg-dark-900/70 dark:ring-primary-900/40"
+                    class="inline-flex min-w-0 items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-[11px] ring-1 ring-gray-200 dark:bg-dark-900/60 dark:ring-dark-700"
                   >
                     <Icon name="link" size="sm" />
-                    {{ hint.text }}
+                    <span class="truncate">{{ hint.text }}</span>
                   </span>
-                </div>
-              </div>
+                </template>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div class="grid gap-3 sm:grid-cols-3">
+      <div class="grid grid-cols-3 divide-x divide-gray-200 border-t border-gray-200 dark:divide-dark-700 dark:border-dark-700">
               <div
                 data-testid="profile-overview-metric-balance"
-                class="rounded-2xl bg-white/85 px-4 py-3 shadow-sm ring-1 ring-white/70 dark:bg-dark-900/60 dark:ring-dark-700"
+                class="min-w-0 px-3 py-3 sm:px-5 sm:py-4"
               >
-                <p class="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+                <div class="flex items-center gap-2">
+                  <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                    <Icon name="dollar" size="sm" />
+                  </span>
+                <p class="truncate text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                   {{ t('profile.accountBalance') }}
                 </p>
-                <p class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                </div>
+                <p class="mt-1.5 truncate font-mono text-base font-bold tabular-nums text-gray-950 dark:text-white sm:mt-2 sm:text-2xl">
                   {{ formatCurrency(user?.balance || 0) }}
                 </p>
               </div>
               <div
                 data-testid="profile-overview-metric-concurrency"
-                class="rounded-2xl bg-white/85 px-4 py-3 shadow-sm ring-1 ring-white/70 dark:bg-dark-900/60 dark:ring-dark-700"
+                class="min-w-0 px-3 py-3 sm:px-5 sm:py-4"
               >
-                <p class="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+                <div class="flex items-center gap-2">
+                  <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                    <Icon name="bolt" size="sm" />
+                  </span>
+                <p class="truncate text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                   {{ t('profile.concurrencyLimit') }}
                 </p>
-                <p class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                </div>
+                <p class="mt-1.5 truncate font-mono text-base font-bold tabular-nums text-gray-950 dark:text-white sm:mt-2 sm:text-2xl">
                   {{ user?.concurrency || 0 }}
                 </p>
               </div>
               <div
                 data-testid="profile-overview-metric-member-since"
-                class="rounded-2xl bg-white/85 px-4 py-3 shadow-sm ring-1 ring-white/70 dark:bg-dark-900/60 dark:ring-dark-700"
+                class="min-w-0 px-3 py-3 sm:px-5 sm:py-4"
               >
-                <p class="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+                <div class="flex items-center gap-2">
+                  <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400">
+                    <Icon name="calendar" size="sm" />
+                  </span>
+                <p class="truncate text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                   {{ t('profile.memberSince') }}
                 </p>
-                <p class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                </div>
+                <p class="mt-1.5 truncate font-mono text-base font-bold tabular-nums text-gray-950 dark:text-white sm:mt-2 sm:text-2xl">
                   {{ memberSinceLabel }}
                 </p>
               </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
-    <div class="space-y-6">
-      <div data-testid="profile-main-column" class="space-y-6">
+    <div class="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.46fr)] xl:items-start">
+      <div data-testid="profile-main-column" class="space-y-4 sm:space-y-5">
         <section
           data-testid="profile-basics-panel"
-          class="card border border-gray-100 bg-white/90 p-6 dark:border-dark-700 dark:bg-dark-900/50"
+          class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-700 dark:bg-dark-800"
         >
-          <div class="mb-5 flex items-start justify-between gap-4">
+          <div class="border-b border-gray-200 px-4 py-3.5 dark:border-dark-700 sm:px-5">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 class="text-base font-semibold text-gray-950 dark:text-white">
                 {{ t('profile.basicsTitle') }}
               </h3>
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -115,15 +127,15 @@
             </div>
           </div>
 
-          <div class="grid gap-6 sm:grid-cols-1 md:grid-cols-2">
-            <div class="rounded-3xl border border-gray-100 bg-gray-50/80 p-5 dark:border-dark-700 dark:bg-dark-900/30">
+          <div class="grid gap-3 p-4 md:grid-cols-2 sm:p-5">
+            <div class="rounded-lg border border-gray-200 bg-gray-50/70 p-4 dark:border-dark-700 dark:bg-dark-900/30">
               <ProfileAvatarCard
                 :user="user"
                 embedded
               />
             </div>
 
-            <div class="rounded-3xl border border-gray-100 bg-gray-50/80 p-5 dark:border-dark-700 dark:bg-dark-900/30">
+            <div class="rounded-lg border border-gray-200 bg-gray-50/70 p-4 dark:border-dark-700 dark:bg-dark-900/30">
               <ProfileEditForm
                 :initial-username="user?.username || ''"
                 embedded
@@ -134,7 +146,7 @@
 
         <section
           data-testid="profile-auth-bindings-panel"
-          class="card border border-gray-100 bg-white/90 p-6 dark:border-dark-700 dark:bg-dark-900/50"
+          class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-800 sm:p-5"
         >
           <ProfileIdentityBindingsSection
             :user="user"
@@ -151,10 +163,10 @@
         </section>
       </div>
 
-      <div data-testid="profile-side-column" class="space-y-6">
+      <div data-testid="profile-side-column" class="space-y-4 sm:space-y-5 xl:sticky xl:top-4">
         <section
           v-if="sourceHints.length"
-          class="card border border-gray-100 bg-white/90 p-6 dark:border-dark-700 dark:bg-dark-900/50"
+          class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-800 sm:p-5"
         >
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
             {{ t('profile.linkedProfileSources') }}
@@ -163,11 +175,11 @@
             {{ t('profile.linkedProfileSourcesDescription') }}
           </p>
 
-          <div class="mt-5 grid gap-3">
+          <div class="mt-4 grid gap-2">
             <div
               v-for="hint in sourceHints"
               :key="hint.key"
-              class="flex items-start gap-3 rounded-2xl border border-gray-100 bg-gray-50/80 px-4 py-3 text-sm text-gray-600 dark:border-dark-700 dark:bg-dark-900/30 dark:text-gray-300"
+              class="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-2.5 text-sm text-gray-600 dark:border-dark-700 dark:bg-dark-900/30 dark:text-gray-300"
             >
               <Icon name="link" size="sm" class="mt-0.5 text-gray-400 dark:text-gray-500" />
               <span>{{ hint.text }}</span>

@@ -1,14 +1,14 @@
 <template>
   <BaseDialog :show="show" :title="t('admin.users.groupConfig')" width="wide" @close="$emit('close')">
-    <div v-if="user" class="space-y-6">
+    <div v-if="user" class="space-y-5">
       <!-- 用户信息头部 -->
-      <div class="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-primary-50 to-primary-100 p-5 dark:from-primary-900/30 dark:to-primary-800/20">
-        <div class="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm dark:bg-dark-700">
-          <span class="text-2xl font-semibold text-primary-600 dark:text-primary-400">{{ user.email.charAt(0).toUpperCase() }}</span>
+      <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50/70 p-4 dark:border-dark-700 dark:bg-dark-900/50">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white dark:border-dark-600 dark:bg-dark-800">
+          <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">{{ user.email.charAt(0).toUpperCase() }}</span>
         </div>
-        <div class="flex-1">
-          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ user.email }}</p>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ t('admin.users.groupConfigHint', { email: user.email }) }}</p>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ user.email }}</p>
+          <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('admin.users.groupConfigHint', { email: user.email }) }}</p>
         </div>
       </div>
 
@@ -20,7 +20,7 @@
         </svg>
       </div>
 
-      <div v-else class="space-y-6">
+      <div v-else class="space-y-5">
         <!-- 专属分组区域 -->
         <div v-if="exclusiveGroups.length > 0">
           <div class="mb-3 flex items-center gap-2">
@@ -28,16 +28,16 @@
             <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.users.exclusiveGroups') }}</h4>
             <span class="text-xs text-gray-400">({{ exclusiveGroupConfigs.filter(c => c.isSelected).length }}/{{ exclusiveGroupConfigs.length }})</span>
           </div>
-          <div class="grid gap-3">
+          <div class="grid gap-2">
             <div
               v-for="config in exclusiveGroupConfigs"
               :key="config.groupId"
-              class="group relative overflow-hidden rounded-xl border-2 p-4 transition-all duration-200"
+              class="group relative overflow-hidden rounded-lg border p-3.5 transition-colors duration-150"
               :class="config.isSelected
-                ? 'border-primary-400 bg-primary-50/50 shadow-sm dark:border-primary-500 dark:bg-primary-900/20'
+                ? 'border-primary-300 bg-primary-50/40 dark:border-primary-700 dark:bg-primary-950/20'
                 : 'border-gray-200 bg-white hover:border-gray-300 dark:border-dark-600 dark:bg-dark-800 dark:hover:border-dark-500'"
             >
-              <div class="flex items-center gap-4">
+              <div class="flex flex-wrap items-center gap-3">
                 <!-- 复选框 -->
                 <div class="flex-shrink-0">
                   <label class="relative flex h-6 w-6 cursor-pointer items-center justify-center">
@@ -58,12 +58,12 @@
                 <!-- 分组信息 -->
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
-                    <span class="text-base font-semibold text-gray-900 dark:text-white">{{ config.groupName }}</span>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ config.groupName }}</span>
                     <span class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
                       {{ t('admin.groups.exclusive') }}
                     </span>
                   </div>
-                  <div class="mt-1.5 flex items-center gap-3 text-sm">
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
                     <span class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
                       <PlatformIcon :platform="config.platform" size="xs" />
                       <span>{{ config.platform }}</span>
@@ -76,8 +76,8 @@
                 </div>
 
                 <!-- 专属倍率输入 -->
-                <div class="flex flex-shrink-0 items-center gap-3">
-                  <label class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.customRate') }}</label>
+                <div class="ml-8 flex w-full items-center justify-between gap-3 sm:ml-0 sm:w-auto sm:flex-shrink-0 sm:justify-start">
+                  <label class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.customRate') }}</label>
                   <input
                     type="number"
                     step="0.001"
@@ -85,7 +85,7 @@
                     :value="config.customRate ?? ''"
                     @input="updateCustomRate(config.groupId, ($event.target as HTMLInputElement).value)"
                     :placeholder="String(config.defaultRate)"
-                    class="hide-spinner w-24 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-dark-500 dark:bg-dark-700 dark:focus:border-primary-500"
+                    class="hide-spinner h-8 w-20 rounded-md border border-gray-300 bg-white px-2.5 text-xs font-medium transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-dark-500 dark:bg-dark-700 dark:focus:border-primary-500"
                   />
                 </div>
               </div>
@@ -100,13 +100,13 @@
             <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.users.publicGroups') }}</h4>
             <span class="text-xs text-gray-400">({{ publicGroupConfigs.length }})</span>
           </div>
-          <div class="grid gap-3">
+          <div class="grid gap-2">
             <div
               v-for="config in publicGroupConfigs"
               :key="config.groupId"
-              class="relative overflow-hidden rounded-xl border-2 border-green-200 bg-green-50/50 p-4 dark:border-green-800/50 dark:bg-green-900/10"
+              class="relative overflow-hidden rounded-lg border border-green-200 bg-green-50/35 p-3.5 dark:border-green-800/50 dark:bg-green-900/10"
             >
-              <div class="flex items-center gap-4">
+              <div class="flex flex-wrap items-center gap-3">
                 <!-- 复选框（禁用状态） -->
                 <div class="flex-shrink-0">
                   <div class="flex h-5 w-5 items-center justify-center rounded-md border-2 border-green-400 bg-green-500 dark:border-green-600 dark:bg-green-600">
@@ -119,9 +119,9 @@
                 <!-- 分组信息 -->
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
-                    <span class="text-base font-semibold text-gray-900 dark:text-white">{{ config.groupName }}</span>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ config.groupName }}</span>
                   </div>
-                  <div class="mt-1.5 flex items-center gap-3 text-sm">
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
                     <span class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
                       <PlatformIcon :platform="config.platform" size="xs" />
                       <span>{{ config.platform }}</span>
@@ -134,8 +134,8 @@
                 </div>
 
                 <!-- 专属倍率输入 -->
-                <div class="flex flex-shrink-0 items-center gap-3">
-                  <label class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.customRate') }}</label>
+                <div class="ml-8 flex w-full items-center justify-between gap-3 sm:ml-0 sm:w-auto sm:flex-shrink-0 sm:justify-start">
+                  <label class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.customRate') }}</label>
                   <input
                     type="number"
                     step="0.001"
@@ -143,7 +143,7 @@
                     :value="config.customRate ?? ''"
                     @input="updateCustomRate(config.groupId, ($event.target as HTMLInputElement).value)"
                     :placeholder="String(config.defaultRate)"
-                    class="hide-spinner w-24 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-dark-500 dark:bg-dark-700 dark:focus:border-primary-500"
+                    class="hide-spinner h-8 w-20 rounded-md border border-gray-300 bg-white px-2.5 text-xs font-medium transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-dark-500 dark:bg-dark-700 dark:focus:border-primary-500"
                   />
                 </div>
               </div>

@@ -105,6 +105,19 @@ type APIKeyRateLimitData struct {
 	Window7dStart *time.Time
 }
 
+// UserGroupEntitlement keeps the normal group multiplier, a manual user rate,
+// and the Omnio Pro rate as distinct layers. EffectiveRateMultiplier is the
+// value used for the current user without mutating the group configuration.
+type UserGroupEntitlement struct {
+	GroupID                 int64    `json:"group_id"`
+	PersonalRateMultiplier  *float64 `json:"personal_rate_multiplier,omitempty"`
+	ProRateMultiplier       *float64 `json:"pro_rate_multiplier,omitempty"`
+	EffectiveRateMultiplier float64  `json:"effective_rate_multiplier"`
+	ProOnly                 bool     `json:"pro_only"`
+	ProAccess               bool     `json:"pro_access"`
+	ProLevelName            string   `json:"pro_level_name,omitempty"`
+}
+
 // EffectiveUsage5h returns the 5h window usage, or 0 if the window has expired.
 func (d *APIKeyRateLimitData) EffectiveUsage5h() float64 {
 	if IsWindowExpired(d.Window5hStart, RateLimitWindow5h) {
@@ -231,6 +244,7 @@ type APIKeyService struct {
 	cache                     APIKeyCache
 	rateLimitCacheInvalid     RateLimitCacheInvalidator // optional: invalidate Redis rate limit cache
 	concurrencyService        *ConcurrencyService
+	membershipService         *MembershipService
 	cfg                       *config.Config
 	authCacheL1               *ristretto.Cache
 	authNegativeCacheL1       *ristretto.Cache
@@ -307,6 +321,24 @@ func (s *APIKeyService) SetRateLimitCacheInvalidator(inv RateLimitCacheInvalidat
 
 func (s *APIKeyService) SetConcurrencyService(concurrencyService *ConcurrencyService) {
 	s.concurrencyService = concurrencyService
+}
+
+func (s *APIKeyService) SetMembershipService(membershipService *MembershipService) {
+	s.membershipService = membershipService
+}
+
+func (s *APIKeyService) ResolveConcurrency(ctx context.Context, userID int64, base int) int {
+	if s == nil || s.membershipService == nil {
+		return base
+	}
+	return s.membershipService.ResolveConcurrency(ctx, userID, base)
+}
+
+func (s *APIKeyService) HasAvailableOmnioProQuota(ctx context.Context, userID, groupID int64) bool {
+	if s == nil || s.membershipService == nil {
+		return false
+	}
+	return s.membershipService.HasAvailableOmnioProQuota(ctx, userID, groupID)
 }
 
 func (s *APIKeyService) compileAPIKeyIPRules(apiKey *APIKey) {
@@ -388,13 +420,44 @@ func (s *APIKeyService) incrementAPIKeyErrorCount(ctx context.Context, userID in
 // 对于订阅类型分组：检查用户是否有有效订阅
 // 对于标准类型分组：使用原有的 AllowedGroups 和 IsExclusive 逻辑
 func (s *APIKeyService) canUserBindGroup(ctx context.Context, user *User, group *Group) bool {
+	var proBenefit *EffectiveMembershipGroupBenefit
+	proOnly := false
+	if s.membershipService != nil {
+		proOnlyGroupIDs, err := s.membershipService.GetProOnlyGroupIDs(ctx)
+		if err != nil {
+			return false
+		}
+		_, proOnly = proOnlyGroupIDs[group.ID]
+		benefit, ok, err := s.membershipService.GetEffectiveGroupBenefit(ctx, user.ID, group.ID)
+		if err != nil {
+			return false
+		}
+		if ok {
+			proBenefit = &benefit
+		}
+	}
+	if proOnly {
+		return proBenefit != nil && proBenefit.AllowAccess
+	}
 	// 订阅类型分组：需要有效订阅
 	if group.IsSubscriptionType() {
-		_, err := s.userSubRepo.GetActiveByUserIDAndGroupID(ctx, user.ID, group.ID)
-		return err == nil // 有有效订阅则允许
+		if _, err := s.userSubRepo.GetActiveByUserIDAndGroupID(ctx, user.ID, group.ID); err == nil {
+			return true
+		}
+		return proBenefit != nil && proBenefit.AllowAccess
 	}
 	// 标准类型分组：使用原有逻辑
-	return user.CanBindGroup(group.ID, group.IsExclusive)
+	if user.CanBindGroup(group.ID, group.IsExclusive) {
+		return true
+	}
+	return proBenefit != nil && proBenefit.AllowAccess
+}
+
+func (s *APIKeyService) CanUserBindGroup(ctx context.Context, user *User, group *Group) bool {
+	if user == nil || group == nil {
+		return false
+	}
+	return s.canUserBindGroup(ctx, user, group)
 }
 
 // Create 创建API Key
@@ -946,11 +1009,23 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 	for _, sub := range activeSubscriptions {
 		subscribedGroupIDs[sub.GroupID] = true
 	}
+	proBenefits := map[int64]EffectiveMembershipGroupBenefit{}
+	proOnlyGroupIDs := map[int64]struct{}{}
+	if s.membershipService != nil {
+		proBenefits, err = s.membershipService.GetEffectiveGroupBenefits(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("get effective Omnio Pro benefits: %w", err)
+		}
+		proOnlyGroupIDs, err = s.membershipService.GetProOnlyGroupIDs(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("get Omnio Pro-only groups: %w", err)
+		}
+	}
 
 	// 过滤出用户有权限的分组
 	availableGroups := make([]Group, 0)
 	for _, group := range allGroups {
-		if s.canUserBindGroupInternal(user, &group, subscribedGroupIDs) {
+		if s.canUserBindGroupInternal(user, &group, subscribedGroupIDs, proBenefits, proOnlyGroupIDs) {
 			availableGroups = append(availableGroups, group)
 		}
 	}
@@ -959,13 +1034,17 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 }
 
 // canUserBindGroupInternal 内部方法，检查用户是否可以绑定分组（使用预加载的订阅数据）
-func (s *APIKeyService) canUserBindGroupInternal(user *User, group *Group, subscribedGroupIDs map[int64]bool) bool {
+func (s *APIKeyService) canUserBindGroupInternal(user *User, group *Group, subscribedGroupIDs map[int64]bool, proBenefits map[int64]EffectiveMembershipGroupBenefit, proOnlyGroupIDs map[int64]struct{}) bool {
+	proBenefit, hasProBenefit := proBenefits[group.ID]
+	if _, proOnly := proOnlyGroupIDs[group.ID]; proOnly {
+		return hasProBenefit && proBenefit.AllowAccess
+	}
 	// 订阅类型分组：需要有效订阅
 	if group.IsSubscriptionType() {
-		return subscribedGroupIDs[group.ID]
+		return subscribedGroupIDs[group.ID] || (hasProBenefit && proBenefit.AllowAccess)
 	}
 	// 标准类型分组：使用原有逻辑
-	return user.CanBindGroup(group.ID, group.IsExclusive)
+	return user.CanBindGroup(group.ID, group.IsExclusive) || (hasProBenefit && proBenefit.AllowAccess)
 }
 
 func (s *APIKeyService) SearchAPIKeys(ctx context.Context, userID int64, keyword string, limit int) ([]APIKey, error) {
@@ -987,6 +1066,63 @@ func (s *APIKeyService) GetUserGroupRates(ctx context.Context, userID int64) (ma
 		return nil, fmt.Errorf("get user group rates: %w", err)
 	}
 	return rates, nil
+}
+
+// GetUserGroupEntitlements returns distinct personal, Omnio Pro and effective
+// rates for active groups. Manual personal rates keep their historical higher
+// priority over Pro rates; both override the public group multiplier.
+func (s *APIKeyService) GetUserGroupEntitlements(ctx context.Context, userID int64) (map[int64]UserGroupEntitlement, error) {
+	groups, err := s.groupRepo.ListActive(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list active groups: %w", err)
+	}
+	personalRates := map[int64]float64{}
+	if s.userGroupRateRepo != nil {
+		personalRates, err = s.userGroupRateRepo.GetByUserID(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("get personal group rates: %w", err)
+		}
+	}
+	proBenefits := map[int64]EffectiveMembershipGroupBenefit{}
+	proOnlyGroupIDs := map[int64]struct{}{}
+	if s.membershipService != nil {
+		proBenefits, err = s.membershipService.GetEffectiveGroupBenefits(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("get effective Omnio Pro benefits: %w", err)
+		}
+		proOnlyGroupIDs, err = s.membershipService.GetProOnlyGroupIDs(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("get Omnio Pro-only groups: %w", err)
+		}
+	}
+
+	result := make(map[int64]UserGroupEntitlement, len(groups))
+	for i := range groups {
+		group := groups[i]
+		benefit, hasProBenefit := proBenefits[group.ID]
+		_, proOnly := proOnlyGroupIDs[group.ID]
+		if proOnly && (!hasProBenefit || !benefit.AllowAccess) {
+			continue
+		}
+		item := UserGroupEntitlement{GroupID: group.ID, EffectiveRateMultiplier: group.RateMultiplier}
+		item.ProOnly = proOnly
+		if hasProBenefit {
+			item.ProAccess = benefit.AllowAccess
+			item.ProLevelName = benefit.LevelName
+			if benefit.RateMultiplier != nil {
+				v := *benefit.RateMultiplier
+				item.ProRateMultiplier = &v
+				item.EffectiveRateMultiplier = v
+			}
+		}
+		if value, ok := personalRates[group.ID]; ok {
+			v := value
+			item.PersonalRateMultiplier = &v
+			item.EffectiveRateMultiplier = value
+		}
+		result[group.ID] = item
+	}
+	return result, nil
 }
 
 // CheckAPIKeyQuotaAndExpiry checks if the API key is valid for use (not expired, quota not exhausted)

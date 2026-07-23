@@ -6,8 +6,9 @@
       @click="toggle"
       :disabled="disabled"
       :aria-expanded="isOpen"
-      :aria-haspopup="true"
-      aria-label="Select option"
+      aria-haspopup="listbox"
+      :aria-controls="isOpen ? `${instanceId}-listbox` : undefined"
+      :aria-label="placeholderText"
       :class="[
         'select-trigger',
         isOpen && 'select-trigger-open',
@@ -17,7 +18,7 @@
       @keydown.down.prevent="onTriggerKeyDown"
       @keydown.up.prevent="onTriggerKeyDown"
     >
-      <span class="select-value">
+      <span :class="['select-value', !hasValue && 'select-value-placeholder']">
         <slot name="selected" :option="selectedOption">
           {{ selectedLabel }}
         </slot>
@@ -49,10 +50,13 @@
         <div
           v-if="isOpen"
           ref="dropdownRef"
+          :id="`${instanceId}-listbox`"
           class="select-dropdown-portal"
           :class="[instanceId]"
           :style="dropdownStyle"
           role="listbox"
+          tabindex="-1"
+          :aria-activedescendant="focusedIndex >= 0 ? getOptionId(focusedIndex) : undefined"
           @click.stop
           @mousedown.stop
           @keydown="onDropdownKeyDown"
@@ -75,10 +79,11 @@
             <div
               v-for="(option, index) in filteredOptions"
               :key="`${typeof getOptionValue(option)}:${String(getOptionValue(option) ?? '')}`"
-              role="option"
-              :aria-selected="isSelected(option)"
-              :aria-disabled="isOptionDisabled(option)"
-              @click.stop="!isOptionDisabled(option) && selectOption(option)"
+              :id="getOptionId(index)"
+              :role="isGroupHeaderOption(option) ? 'presentation' : 'option'"
+              :aria-selected="isGroupHeaderOption(option) ? undefined : isSelected(option)"
+              :aria-disabled="isGroupHeaderOption(option) || isOptionDisabled(option)"
+              @click.stop="isSelectableOption(option) && selectOption(option)"
               @mouseenter="handleOptionMouseEnter(option, index)"
               :class="[
                 'select-option',
@@ -197,7 +202,9 @@ const dropdownStyle = computed(() => {
   const style: Record<string, string> = {
     position: 'fixed',
     left: `${rect.left}px`,
+    width: `${rect.width}px`,
     minWidth: `${rect.width}px`,
+    maxWidth: 'calc(100vw - 16px)',
     zIndex: '100000020'
   }
 
@@ -237,6 +244,11 @@ const isGroupHeaderOption = (option: any): boolean => {
   }
   return false
 }
+
+const isSelectableOption = (option: any): boolean =>
+  !isGroupHeaderOption(option) && !isOptionDisabled(option)
+
+const getOptionId = (index: number) => `${instanceId}-option-${index}`
 
 const selectedOption = computed(() => {
   return props.options.find((opt) => getOptionValue(opt) === props.modelValue) || null
@@ -287,7 +299,7 @@ const findNextEnabledIndex = (startIndex: number): number => {
   if (opts.length === 0) return -1
   for (let offset = 0; offset < opts.length; offset++) {
     const idx = (startIndex + offset) % opts.length
-    if (!isOptionDisabled(opts[idx])) return idx
+    if (isSelectableOption(opts[idx])) return idx
   }
   return -1
 }
@@ -297,7 +309,7 @@ const findPrevEnabledIndex = (startIndex: number): number => {
   if (opts.length === 0) return -1
   for (let offset = 0; offset < opts.length; offset++) {
     const idx = (startIndex - offset + opts.length) % opts.length
-    if (!isOptionDisabled(opts[idx])) return idx
+    if (isSelectableOption(opts[idx])) return idx
   }
   return -1
 }
@@ -346,13 +358,15 @@ watch(isOpen, (open) => {
     } else {
       const selectedIdx = filteredOptions.value.findIndex(isSelected)
       const initialIdx = selectedIdx >= 0 ? selectedIdx : 0
-      focusedIndex.value = isOptionDisabled(filteredOptions.value[initialIdx])
+      focusedIndex.value = !isSelectableOption(filteredOptions.value[initialIdx])
         ? findNextEnabledIndex(initialIdx + 1)
         : initialIdx
     }
 
     if (isSearchable.value) {
       nextTick(() => searchInputRef.value?.focus())
+    } else {
+      nextTick(() => dropdownRef.value?.focus())
     }
     // Add scroll listener to update position
     window.addEventListener('scroll', updateTriggerRect, { capture: true, passive: true })
@@ -402,7 +416,7 @@ const onDropdownKeyDown = (e: KeyboardEvent) => {
       e.preventDefault()
       if (focusedIndex.value >= 0 && focusedIndex.value < filteredOptions.value.length) {
         const opt = filteredOptions.value[focusedIndex.value]
-        if (!isOptionDisabled(opt)) selectOption(opt)
+        if (isSelectableOption(opt)) selectOption(opt)
       }
       break
     case 'Escape':
@@ -455,121 +469,224 @@ onUnmounted(() => {
 
 <style scoped>
 .select-trigger {
-  @apply flex w-full items-center justify-between gap-2;
-  @apply rounded-xl px-4 py-2.5 text-sm;
-  @apply bg-white dark:bg-dark-800;
-  @apply border border-gray-200 dark:border-dark-600;
-  @apply text-gray-900 dark:text-gray-100;
-  @apply transition-all duration-200;
-  @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30;
-  @apply hover:border-gray-300 dark:hover:border-dark-500;
-  @apply cursor-pointer;
+  display: flex;
+  width: 100%;
+  min-height: var(--omnio-control-height, 2.5rem);
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: var(--omnio-radius-control, 0.875rem);
+  color: var(--omnio-foreground, #111827);
+  background: transparent;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  outline: none;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--omnio-border-strong, #d1d5db);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 2.5%, transparent);
+}
+
+.select-trigger:focus-visible {
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 22%, transparent);
 }
 
 .select-trigger-open {
-  @apply border-primary-500 ring-2 ring-primary-500/30;
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 20%, transparent);
 }
 
 .select-trigger-error {
-  @apply border-red-500 focus:border-red-500 focus:ring-red-500/30;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16);
 }
 
 .select-trigger-disabled {
-  @apply cursor-not-allowed bg-gray-100 opacity-60 dark:bg-dark-900;
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 4%, transparent);
 }
 
 .select-value {
-  @apply flex-1 truncate text-left;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-value-placeholder {
+  color: var(--omnio-muted, #6b7280);
 }
 
 .select-icon {
-  @apply flex-shrink-0 text-gray-400 dark:text-dark-400;
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--omnio-muted, #6b7280);
 }
 
 .select-clear {
-  @apply flex flex-shrink-0 cursor-pointer items-center justify-center;
-  @apply rounded text-gray-400 transition-colors;
-  @apply hover:text-gray-600 dark:hover:text-gray-200;
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 0.35rem;
+  color: var(--omnio-muted, #6b7280);
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.select-clear:hover {
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 6%, transparent);
 }
 </style>
 
 <style>
 .select-dropdown-portal {
-  @apply w-max min-w-[200px];
-  @apply bg-white dark:bg-dark-800;
-  @apply rounded-xl;
-  @apply border border-gray-200 dark:border-dark-700;
-  @apply shadow-lg shadow-black/10 dark:shadow-black/30;
-  @apply overflow-hidden;
+  min-width: 9rem;
+  max-height: min(20rem, calc(100svh - 1rem));
+  padding: 0.25rem;
+  overflow: hidden;
   pointer-events: auto !important;
+  border: 0;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: var(--omnio-radius-panel, 1.25rem);
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+  box-shadow: var(--omnio-card-shadow-hover, 0 8px 24px rgba(15, 23, 42, 0.14));
 }
 
 .select-dropdown-portal .select-search {
-  @apply flex items-center gap-2 px-3 py-2;
-  @apply border-b border-gray-100 dark:border-dark-700;
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: var(--omnio-radius-control, 0.875rem);
 }
 
 .select-dropdown-portal .select-search-input {
-  @apply flex-1 bg-transparent text-sm;
-  @apply text-gray-900 dark:text-gray-100;
-  @apply placeholder:text-gray-400 dark:placeholder:text-dark-400;
-  @apply focus:outline-none;
+  min-width: 0;
+  flex: 1;
+  color: var(--omnio-foreground, #111827);
+  background: transparent;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.select-dropdown-portal .select-search-input::placeholder {
+  color: var(--omnio-muted, #6b7280);
 }
 
 .select-dropdown-portal .select-options {
-  @apply max-h-80 overflow-y-auto py-1 outline-none;
+  max-height: 18rem;
+  overflow-y: auto;
+  outline: none;
 }
 
 .select-dropdown-portal .select-option {
-  @apply flex items-center justify-between gap-2;
-  @apply px-4 py-2.5 text-sm;
-  @apply text-gray-700 dark:text-gray-300;
-  @apply cursor-pointer transition-colors duration-150;
-  @apply hover:bg-gray-50 dark:hover:bg-dark-700;
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  padding: 0.25rem 0.4rem;
   pointer-events: auto !important;
+  cursor: default;
+  border-radius: 0.75rem;
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  transition: color 100ms ease, background-color 100ms ease;
 }
 
 .select-dropdown-portal .select-option-selected {
-  @apply bg-primary-50 dark:bg-primary-900/20;
-  @apply text-primary-700 dark:text-primary-300;
+  color: var(--omnio-primary-strong, #2563eb);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 9%, transparent);
 }
 
+.select-dropdown-portal .select-option:hover,
 .select-dropdown-portal .select-option-focused {
-  @apply bg-gray-100 dark:bg-dark-700;
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 6%, transparent);
 }
 
 .select-dropdown-portal .select-option-disabled {
-  @apply cursor-not-allowed opacity-40;
+  pointer-events: none !important;
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .select-dropdown-portal .select-option-group {
-  @apply cursor-default select-none;
-  @apply bg-gray-50 dark:bg-dark-900;
-  @apply text-[11px] font-bold uppercase tracking-wider;
-  @apply text-gray-500 dark:text-gray-400;
+  min-height: 1.75rem;
+  padding: 0.35rem 0.4rem 0.2rem;
+  cursor: default;
+  user-select: none;
+  color: var(--omnio-muted, #6b7280);
+  background: transparent;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .select-dropdown-portal .select-option-group:hover {
-  @apply bg-gray-50 dark:bg-dark-900;
+  color: var(--omnio-muted, #6b7280);
+  background: transparent;
 }
 
 .select-dropdown-portal .select-option-label {
-  @apply flex-1 min-w-0 truncate text-left;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .select-dropdown-portal .select-empty {
-  @apply px-4 py-8 text-center text-sm;
-  @apply text-gray-500 dark:text-dark-400;
+  padding: 1.5rem 0.75rem;
+  color: var(--omnio-muted, #6b7280);
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.dark .select-dropdown-portal {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38), 0 0 0 1px color-mix(in srgb, var(--omnio-foreground, #f8fafc) 12%, transparent);
 }
 
 .select-dropdown-enter-active,
 .select-dropdown-leave-active {
-  transition: all 0.2s ease;
+  transform-origin: top;
+  transition: opacity 100ms ease, transform 100ms ease;
 }
 
 .select-dropdown-enter-from,
 .select-dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-0.25rem) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .select-dropdown-enter-active,
+  .select-dropdown-leave-active,
+  .select-dropdown-portal .select-option {
+    transition-duration: 1ms;
+  }
 }
 </style>

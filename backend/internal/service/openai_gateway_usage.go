@@ -156,6 +156,9 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	if apiKey.GroupID != nil && apiKey.Group != nil {
 		multiplier = s.ResolveUserGroupRateMultiplier(ctx, user.ID, *apiKey.GroupID, apiKey.Group.RateMultiplier)
 	}
+	if subscription != nil && subscription.Entitlement != nil {
+		multiplier = subscription.Entitlement.RateMultiplier
+	}
 	// token 倍率叠加高峰因子（token 计费含图片 token，图片按次倍率不受影响）。高峰因子按请求时刻现算，
 	// 不并入上面的 Resolve，以免污染 user:group 倍率缓存。
 	baseMultiplier := multiplier

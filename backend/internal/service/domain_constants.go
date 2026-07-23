@@ -271,6 +271,8 @@ const (
 	SettingKeyTablePageSizeOptions        = "table_page_size_options"       // 表格可选每页条数（JSON 数组）
 	SettingKeyCustomMenuItems             = "custom_menu_items"             // 自定义菜单项（JSON 数组）
 	SettingKeyCustomEndpoints             = "custom_endpoints"              // 自定义端点列表（JSON 数组）
+	SettingKeyTicketUserCenterEnabled     = "ticket_user_center_enabled"    // 普通用户是否可见和访问工单中心（默认开启）
+	SettingKeyTicketAcceptNewEnabled      = "ticket_accept_new_enabled"     // 普通用户是否可以新建工单（默认开启）
 
 	// 默认配置
 	SettingKeyDefaultConcurrency   = "default_concurrency"    // 新用户默认并发量

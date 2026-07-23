@@ -1,6 +1,22 @@
 <template>
   <AppLayout>
     <TablePageLayout>
+      <template #actions>
+        <button
+          v-if="selectedCount > 0"
+          class="btn btn-secondary"
+          data-test="bulk-edit-limits"
+          @click="showBulkEditModal = true"
+        >
+          <Icon name="users" size="md" />
+          {{ t('admin.users.bulkLimits.action', { count: selectedCount }) }}
+        </button>
+        <button @click="showCreateModal = true" class="btn btn-primary">
+          <Icon name="plus" size="md" />
+          {{ t('admin.users.createUser') }}
+        </button>
+      </template>
+
       <!-- Single Row: Search, Filters, and Actions -->
       <template #filters>
         <div class="flex flex-wrap items-center gap-3">
@@ -242,21 +258,6 @@
               </button>
             </div>
 
-            <button
-              v-if="selectedCount > 0"
-              class="btn btn-secondary flex-1 md:flex-initial"
-              data-test="bulk-edit-limits"
-              @click="showBulkEditModal = true"
-            >
-              <Icon name="users" size="md" class="mr-2" />
-              {{ t('admin.users.bulkLimits.action', { count: selectedCount }) }}
-            </button>
-
-            <!-- Create User Button (full width on mobile, auto width on desktop) -->
-            <button @click="showCreateModal = true" class="btn btn-primary flex-1 md:flex-initial">
-              <Icon name="plus" size="md" class="mr-2" />
-              {{ t('admin.users.createUser') }}
-            </button>
           </div>
         </div>
       </template>
@@ -642,8 +643,6 @@
             <EmptyState
               :title="t('admin.users.noUsersYet')"
               :description="t('admin.users.createFirstUser')"
-              :action-text="t('admin.users.createUser')"
-              @action="showCreateModal = true"
             />
           </template>
         </DataTable>
@@ -652,7 +651,6 @@
       <!-- Pagination -->
       <template #pagination>
       <Pagination
-        v-if="pagination.total > 0"
         :page="pagination.page"
         :total="pagination.total"
         :page-size="pagination.page_size"
@@ -1116,7 +1114,7 @@ const activeAttributeFilters = reactive<Record<number, string>>({})
 
 // Visible filters tracking (which filters are shown in the UI)
 // Keys: 'role', 'status', 'attr_${id}'
-const visibleFilters = reactive<Set<string>>(new Set())
+const visibleFilters = reactive<Set<string>>(new Set(['role', 'status']))
 
 // Dropdown states
 const showFilterDropdown = ref(false)
@@ -1150,6 +1148,7 @@ const loadSavedFilters = () => {
     const savedVisible = localStorage.getItem(VISIBLE_FILTERS_KEY)
     if (savedVisible) {
       const parsed = JSON.parse(savedVisible) as string[]
+      visibleFilters.clear()
       parsed.forEach(key => visibleFilters.add(key))
     }
     // Load filter values

@@ -5,99 +5,78 @@
     width="normal"
     @close="handleClose"
   >
-    <div v-if="account" class="space-y-4">
+    <div v-if="account" class="reauth-modal-stack">
       <!-- Account Info -->
-      <div
-        class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-700"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            :class="[
-              'flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br',
-              isOpenAILike
-                ? 'from-green-500 to-green-600'
+      <div class="reauth-account-summary">
+        <div class="reauth-account-icon">
+          <Icon name="sparkles" size="sm" />
+        </div>
+        <div class="min-w-0">
+          <span class="block truncate text-sm font-semibold text-gray-900 dark:text-white">{{
+            account.name
+          }}</span>
+          <span class="reauth-account-meta">
+            {{
+              isOpenAI
+                ? t('admin.accounts.openaiAccount')
                 : isGemini
-                  ? 'from-blue-500 to-blue-600'
+                  ? t('admin.accounts.geminiAccount')
                   : isAntigravity
-                    ? 'from-purple-500 to-purple-600'
+                    ? t('admin.accounts.antigravityAccount')
                     : isGrok
-                      ? 'from-zinc-700 to-zinc-900'
-                      : 'from-orange-500 to-orange-600'
-            ]"
-          >
-            <Icon name="sparkles" size="md" class="text-white" />
-          </div>
-          <div>
-            <span class="block font-semibold text-gray-900 dark:text-white">{{
-              account.name
-            }}</span>
-            <span class="text-sm text-gray-500 dark:text-gray-400">
-              {{
-                isOpenAI
-                  ? t('admin.accounts.openaiAccount')
-                  : isGemini
-                    ? t('admin.accounts.geminiAccount')
-                    : isAntigravity
-                      ? t('admin.accounts.antigravityAccount')
-                      : isGrok
-                        ? t('admin.accounts.grokAccount')
-                        : t('admin.accounts.claudeCodeAccount')
-              }}
-            </span>
-          </div>
+                      ? t('admin.accounts.grokAccount')
+                      : t('admin.accounts.claudeCodeAccount')
+            }}
+          </span>
         </div>
       </div>
 
       <!-- Add Method Selection (Claude only) -->
-      <fieldset v-if="isAnthropic" class="border-0 p-0">
+      <fieldset v-if="isAnthropic" class="reauth-method-card">
         <legend class="input-label">{{ t('admin.accounts.oauth.authMethod') }}</legend>
-        <div class="mt-2 flex gap-4">
-          <label class="flex cursor-pointer items-center">
+        <div class="reauth-method-options">
+          <label class="reauth-radio-option">
             <input
               v-model="addMethod"
               type="radio"
               value="oauth"
-              class="mr-2 text-primary-600 focus:ring-primary-500"
+              class="reauth-radio"
             />
-            <span class="text-sm text-gray-700 dark:text-gray-300">{{
-              t('admin.accounts.types.oauth')
-            }}</span>
+            <span>{{ t('admin.accounts.types.oauth') }}</span>
           </label>
-          <label class="flex cursor-pointer items-center">
+          <label class="reauth-radio-option">
             <input
               v-model="addMethod"
               type="radio"
               value="setup-token"
-              class="mr-2 text-primary-600 focus:ring-primary-500"
+              class="reauth-radio"
             />
-            <span class="text-sm text-gray-700 dark:text-gray-300">{{
-              t('admin.accounts.setupTokenLongLived')
-            }}</span>
+            <span>{{ t('admin.accounts.setupTokenLongLived') }}</span>
           </label>
         </div>
       </fieldset>
 
       <!-- Gemini OAuth Type Display (read-only) -->
-      <div v-if="isGemini" class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-700">
-        <div class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+      <div v-if="isGemini" class="reauth-type-card">
+        <div class="reauth-type-label">
           {{ t('admin.accounts.oauth.gemini.oauthTypeLabel') }}
         </div>
         <div class="flex items-center gap-3">
           <div
             :class="[
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+              'gemini-type-icon',
               geminiOAuthType === 'google_one'
-                ? 'bg-purple-500 text-white'
+                ? 'gemini-type-icon-google'
                 : geminiOAuthType === 'code_assist'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-amber-500 text-white'
+                  ? 'gemini-type-icon-code'
+                  : 'gemini-type-icon-studio'
             ]"
           >
             <Icon v-if="geminiOAuthType === 'google_one'" name="user" size="sm" />
             <Icon v-else-if="geminiOAuthType === 'code_assist'" name="cloud" size="sm" />
             <Icon v-else name="sparkles" size="sm" />
           </div>
-          <div>
+          <div class="min-w-0">
             <span class="block text-sm font-medium text-gray-900 dark:text-white">
               {{
                 geminiOAuthType === 'google_one'
@@ -107,7 +86,7 @@
                     : t('admin.accounts.gemini.oauthType.customTitle')
               }}
             </span>
-            <span class="text-xs text-gray-500 dark:text-gray-400">
+            <span class="mt-0.5 block text-xs leading-5 text-gray-500 dark:text-gray-400">
               {{
                 geminiOAuthType === 'google_one'
                   ? t('admin.accounts.gemini.oauthType.googleOneDesc')
@@ -141,7 +120,7 @@
     </div>
 
     <template #footer>
-      <div v-if="account" class="flex justify-between gap-3">
+      <div v-if="account" class="reauth-footer">
         <button type="button" class="btn btn-secondary" @click="handleClose">
           {{ t('common.cancel') }}
         </button>
@@ -575,3 +554,160 @@ const handleCookieAuth = async (sessionKey: string) => {
   }
 }
 </script>
+
+<style scoped>
+.reauth-modal-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reauth-account-summary,
+.reauth-method-card,
+.reauth-type-card {
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 2.5%, var(--omnio-surface, #fff));
+}
+
+.reauth-account-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.reauth-account-icon,
+.gemini-type-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+}
+
+.reauth-account-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--omnio-primary, #3b82f6);
+  border-color: color-mix(in srgb, var(--omnio-primary, #3b82f6) 16%, transparent);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 8%, transparent);
+}
+
+.reauth-account-meta {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.reauth-method-card,
+.reauth-type-card {
+  padding: 0.75rem;
+}
+
+.reauth-method-card {
+  min-width: 0;
+}
+
+.reauth-method-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.reauth-radio-option {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.reauth-radio-option:hover {
+  border-color: color-mix(in srgb, var(--omnio-primary, #3b82f6) 32%, var(--omnio-border, #e5e7eb));
+}
+
+.reauth-radio-option:focus-within {
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 12%, transparent);
+}
+
+.reauth-radio-option:has(.reauth-radio:checked) {
+  border-color: color-mix(in srgb, var(--omnio-primary, #3b82f6) 48%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 5%, var(--omnio-surface, #fff));
+}
+
+.reauth-radio {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  accent-color: var(--omnio-primary, #3b82f6);
+}
+
+.reauth-type-label {
+  margin-bottom: 0.625rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 560;
+}
+
+.gemini-type-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.gemini-type-icon-google {
+  color: #7c3aed;
+  border-color: rgba(139, 92, 246, 0.16);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.gemini-type-icon-code {
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.16);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.gemini-type-icon-studio {
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.18);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.reauth-footer {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .reauth-radio-option {
+    flex-basis: 100%;
+  }
+
+  .reauth-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .reauth-footer .btn {
+    width: 100%;
+  }
+}
+</style>

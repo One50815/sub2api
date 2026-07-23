@@ -75,6 +75,7 @@ func RegisterUserRoutes(
 		{
 			groups.GET("/available", h.APIKey.GetAvailableGroups)
 			groups.GET("/rates", h.APIKey.GetUserGroupRates)
+			groups.GET("/entitlements", h.APIKey.GetUserGroupEntitlements)
 		}
 
 		// 用户可用渠道（非管理员接口）
@@ -104,6 +105,26 @@ func RegisterUserRoutes(
 		{
 			announcements.GET("", h.Announcement.List)
 			announcements.POST("/:id/read", h.Announcement.MarkRead)
+		}
+
+		// 工单中心（普通用户）。配置端点始终可读，其余操作由服务层执行总开关校验。
+		tickets := authenticated.Group("/tickets")
+		{
+			tickets.GET("/config", h.Ticket.Config)
+			tickets.GET("", h.Ticket.List)
+			tickets.POST("", h.Ticket.Create)
+			tickets.GET("/summary", h.Ticket.Summary)
+			tickets.GET("/:id", h.Ticket.Get)
+			tickets.POST("/:id/read", h.Ticket.MarkRead)
+			tickets.POST("/:id/messages", h.Ticket.Reply)
+			tickets.PATCH("/:id/status", h.Ticket.UpdateStatus)
+		}
+
+		membership := authenticated.Group("/membership")
+		{
+			membership.GET("/summary", h.Membership.Summary)
+			membership.GET("/offers", h.Membership.Offers)
+			membership.PUT("/subscription-entitlements/:id/overage-policy", h.Membership.SetOveragePolicy)
 		}
 
 		// 卡密兑换

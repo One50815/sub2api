@@ -1,8 +1,8 @@
 <template>
-  <div :class="props.embedded ? 'space-y-4' : 'card'">
+  <div :class="props.embedded ? 'space-y-4' : 'overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-700 dark:bg-dark-800'">
     <div
       v-if="!props.embedded"
-      class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
+      class="border-b border-gray-200 px-4 py-3.5 dark:border-dark-700 sm:px-5"
     >
       <h2 class="text-lg font-medium text-gray-900 dark:text-white">
         {{ t('profile.avatar.title') }}
@@ -15,8 +15,8 @@
     <div :class="props.embedded ? 'space-y-3' : 'flex flex-col gap-5 px-6 py-6 sm:flex-row sm:items-start'">
       <div
         :class="props.embedded
-          ? 'flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 text-xl font-bold text-white shadow-lg shadow-primary-500/20'
-          : 'flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 text-3xl font-bold text-white shadow-lg shadow-primary-500/20'"
+          ? 'flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-900 text-xl font-bold text-white ring-2 ring-white dark:bg-gray-100 dark:text-gray-900 dark:ring-dark-800'
+          : 'flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-900 text-3xl font-bold text-white ring-4 ring-white dark:bg-gray-100 dark:text-gray-900 dark:ring-dark-800'"
       >
         <img
           v-if="avatarPreviewUrl"

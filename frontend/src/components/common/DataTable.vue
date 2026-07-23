@@ -1,29 +1,29 @@
 <template>
-  <div v-if="!isDesktopViewport" class="space-y-3">
+  <div v-if="!isDesktopViewport" class="mobile-data-table">
     <template v-if="loading">
-      <div v-for="i in 5" :key="i" class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-900">
-        <div class="space-y-3">
-          <div v-for="column in dataColumns" :key="column.key" class="flex justify-between">
-            <div class="h-4 w-20 animate-pulse rounded bg-gray-200 dark:bg-dark-700"></div>
-            <div class="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-dark-700"></div>
-          </div>
-          <div v-if="hasActionsColumn" class="border-t border-gray-200 pt-3 dark:border-dark-700">
-            <div class="h-8 w-full animate-pulse rounded bg-gray-200 dark:bg-dark-700"></div>
+      <div class="mobile-data-list" aria-busy="true">
+        <div v-for="i in 5" :key="i" class="mobile-data-row mobile-data-row-skeleton">
+          <div class="mobile-data-fields">
+            <div v-for="column in dataColumns" :key="column.key" class="mobile-data-field">
+              <div class="skeleton-line skeleton-line-label"></div>
+              <div class="skeleton-line skeleton-line-value"></div>
+            </div>
+            <div v-if="hasActionsColumn" class="mobile-data-actions">
+              <div class="skeleton-line skeleton-line-action"></div>
+            </div>
           </div>
         </div>
       </div>
     </template>
 
     <template v-else-if="!data || data.length === 0">
-      <div class="rounded-lg border border-gray-200 bg-white p-12 text-center dark:border-dark-700 dark:bg-dark-900">
+      <div class="mobile-data-list mobile-data-list-empty">
         <slot name="empty">
-          <div class="flex flex-col items-center">
-            <Icon
-              name="inbox"
-              size="xl"
-              class="mb-4 h-12 w-12 text-gray-400 dark:text-dark-500"
-            />
-            <p class="text-lg font-medium text-gray-900 dark:text-gray-100">
+          <div class="mobile-empty-state">
+            <span class="mobile-empty-media">
+              <Icon name="inbox" size="lg" />
+            </span>
+            <p class="mobile-empty-title">
               {{ t('empty.noData') }}
             </p>
           </div>
@@ -32,8 +32,8 @@
     </template>
 
     <template v-else>
-      <div v-if="selectable" class="flex items-center justify-end gap-2 px-1">
-        <label class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+      <div v-if="selectable" class="mobile-selection-bar">
+        <label class="mobile-selection-label">
           <input
             type="checkbox"
             class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-800"
@@ -45,44 +45,44 @@
           <span>{{ t('common.selectAll') }}</span>
         </label>
       </div>
-      <div
-        v-for="(row, index) in sortedData"
-        :key="resolveRowKey(row, index)"
-        class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-900"
-        :class="{
-          'cursor-pointer': clickableRows,
-          'border-primary-300 bg-primary-50/40 dark:border-primary-700 dark:bg-primary-900/10': selectable && isRowSelected(row, index)
-        }"
-        @click="clickableRows && emit('rowClick', row)"
-      >
-        <div class="space-y-3">
-          <div v-if="selectable" class="flex justify-end">
-            <input
-              type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-800"
-              :checked="isRowSelected(row, index)"
-              :aria-label="getRowSelectionLabel(row, index)"
-              data-test="select-row"
-              @click.stop
-              @change="toggleRowSelection(row, index, ($event.target as HTMLInputElement).checked)"
-            />
+      <div class="mobile-data-list">
+        <div
+          v-for="(row, index) in sortedData"
+          :key="resolveRowKey(row, index)"
+          class="mobile-data-row"
+          :class="{
+            'mobile-data-row-clickable': clickableRows,
+            'mobile-data-row-selected': selectable && isRowSelected(row, index)
+          }"
+          @click="clickableRows && emit('rowClick', row)"
+        >
+          <div v-if="selectable" class="mobile-row-selection">
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-800"
+                :checked="isRowSelected(row, index)"
+                :aria-label="getRowSelectionLabel(row, index)"
+                data-test="select-row"
+                @click.stop
+                @change="toggleRowSelection(row, index, ($event.target as HTMLInputElement).checked)"
+              />
           </div>
-          <div
-            v-for="column in dataColumns"
-            :key="column.key"
-            class="flex items-start justify-between gap-4"
-          >
-            <span class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400">
-              {{ column.label }}
-            </span>
-            <div class="text-right text-sm text-gray-900 dark:text-gray-100">
-              <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]" :expanded="actionsExpanded">
-                {{ column.formatter ? column.formatter(row[column.key], row) : row[column.key] }}
-              </slot>
+          <div class="mobile-data-fields">
+            <div
+              v-for="(column, columnIndex) in dataColumns"
+              :key="column.key"
+              :class="['mobile-data-field', columnIndex === 0 && 'mobile-data-field-primary']"
+            >
+              <span class="mobile-data-label">{{ column.label }}</span>
+              <div class="mobile-data-value">
+                <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]" :expanded="actionsExpanded">
+                  {{ column.formatter ? column.formatter(row[column.key], row) : row[column.key] }}
+                </slot>
+              </div>
             </div>
-          </div>
-          <div v-if="hasActionsColumn" class="border-t border-gray-200 pt-3 dark:border-dark-700">
-            <slot name="cell-actions" :row="row" :value="row['actions']" :expanded="actionsExpanded"></slot>
+            <div v-if="hasActionsColumn" class="mobile-data-actions">
+              <slot name="cell-actions" :row="row" :value="row['actions']" :expanded="actionsExpanded"></slot>
+            </div>
           </div>
         </div>
       </div>
@@ -98,7 +98,7 @@
       'is-scrollable': isScrollable
     }"
   >
-    <table class="w-full min-w-max divide-y divide-gray-200 dark:divide-dark-700">
+    <table class="data-table w-full min-w-max divide-y divide-gray-200 dark:divide-dark-700">
       <thead class="table-header bg-gray-50 dark:bg-dark-800">
         <tr>
           <th
@@ -184,18 +184,18 @@
             :colspan="tableColumnCount"
             :class="['py-12 text-center text-gray-500 dark:text-dark-400', getAdaptivePaddingClass()]"
           >
-            <slot name="empty">
-              <div class="flex flex-col items-center">
-                <Icon
-                  name="inbox"
-                  size="xl"
-                  class="mb-4 h-12 w-12 text-gray-400 dark:text-dark-500"
-                />
-                <p class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  {{ t('empty.noData') }}
-                </p>
-              </div>
-            </slot>
+            <div class="table-empty-viewport">
+              <slot name="empty">
+                <div class="desktop-empty-state">
+                  <span class="desktop-empty-media">
+                    <Icon name="inbox" size="lg" />
+                  </span>
+                  <p class="desktop-empty-title">
+                    {{ t('empty.noData') }}
+                  </p>
+                </div>
+              </slot>
+            </div>
           </td>
         </tr>
 
@@ -215,6 +215,7 @@
             class="hover:bg-gray-50 dark:hover:bg-dark-800"
             :class="{
               'cursor-pointer': clickableRows,
+              'data-row-selected': selectable && isRowSelected(item.row, item.index),
               'bg-primary-50/40 dark:bg-primary-900/10': selectable && isRowSelected(item.row, item.index)
             }"
             @click="clickableRows && emit('rowClick', item.row)"
@@ -270,7 +271,7 @@ import Icon from '@/components/icons/Icon.vue'
 
 const { t } = useI18n()
 
-const desktopViewportQuery = '(min-width: 768px)'
+const desktopViewportQuery = '(min-width: 641px)'
 const isDesktopViewport = ref(
   typeof window === 'undefined' ? true : window.matchMedia(desktopViewportQuery).matches
 )
@@ -950,6 +951,184 @@ defineExpose({
 </script>
 
 <style scoped>
+.mobile-data-table {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-data-list {
+  overflow: hidden;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.55rem;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+}
+
+.mobile-data-list-empty {
+  display: flex;
+  min-height: 15rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.mobile-data-row {
+  position: relative;
+  padding: 0.625rem 0.75rem;
+  background: var(--omnio-surface, #fff);
+  transition: background-color 140ms ease;
+}
+
+.mobile-data-row + .mobile-data-row {
+  border-top: 1px solid var(--omnio-border, #e5e7eb);
+}
+
+.mobile-data-row-clickable {
+  cursor: pointer;
+}
+
+.mobile-data-row-clickable:hover {
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 3.5%, var(--omnio-surface, #fff));
+}
+
+.mobile-data-row-selected {
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 8%, var(--omnio-surface, #fff));
+}
+
+.mobile-data-fields {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-data-field {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mobile-data-label {
+  max-width: 44%;
+  flex-shrink: 0;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  font-weight: 540;
+}
+
+.mobile-data-value {
+  min-width: 0;
+  max-width: 68%;
+  overflow: hidden;
+  color: var(--omnio-foreground, #111827);
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.mobile-data-field-primary .mobile-data-value {
+  font-size: 0.82rem;
+  font-weight: 560;
+}
+
+.mobile-data-actions {
+  margin-top: 0.1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--omnio-border, #e5e7eb);
+}
+
+.mobile-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 0.25rem;
+}
+
+.mobile-selection-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.75rem;
+  font-weight: 540;
+}
+
+.mobile-row-selection {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.75rem;
+  z-index: 1;
+}
+
+.mobile-row-selection + .mobile-data-fields .mobile-data-field:first-child {
+  padding-right: 1.75rem;
+}
+
+.mobile-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.mobile-empty-media {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  border-radius: 0.55rem;
+  color: var(--omnio-muted, #6b7280);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 5%, transparent);
+}
+
+.mobile-empty-title {
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 560;
+}
+
+.skeleton-line {
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 9%, transparent);
+  animation: mobile-table-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-line-label {
+  width: 4.5rem;
+  height: 0.65rem;
+}
+
+.skeleton-line-value {
+  width: min(45%, 8rem);
+  height: 0.8rem;
+}
+
+.skeleton-line-action {
+  width: 100%;
+  height: 1.75rem;
+}
+
+@keyframes mobile-table-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 /* 表格横向滚动 */
 .table-wrapper {
   --select-col-width: 52px; /* 勾选列宽度：px-6 (24px*2) + checkbox (16px) */
@@ -959,6 +1138,91 @@ defineExpose({
   flex: 1;
   min-height: 0;
   isolation: isolate;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+}
+
+.data-table {
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table .table-body {
+  background: var(--omnio-surface, #fff) !important;
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 3.5%, var(--omnio-surface, #fff)) !important;
+}
+
+.data-table tbody tr.data-row-selected,
+.data-table tbody tr.data-row-selected:hover {
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 8%, var(--omnio-surface, #fff)) !important;
+}
+
+.data-table .sticky-header-cell {
+  height: 2.5rem;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  color: var(--omnio-muted, #6b7280) !important;
+  font-size: 0.72rem !important;
+  line-height: 1.25;
+  font-weight: 550 !important;
+  letter-spacing: 0.025em !important;
+}
+
+.data-table tbody tr:not([aria-hidden='true']) {
+  min-height: 3.75rem;
+  transition: background-color 120ms ease;
+}
+
+.data-table tbody td {
+  height: 3.75rem;
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+  color: var(--omnio-foreground, #111827) !important;
+  font-size: 0.82rem !important;
+}
+
+.table-empty-viewport {
+  position: sticky;
+  left: 0;
+  width: calc(100vw - var(--omnio-sidebar-width, 16rem) - 4rem);
+  max-width: calc(100vw - 4rem);
+}
+
+.desktop-empty-state {
+  display: flex;
+  min-height: 15rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.desktop-empty-media {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  border-radius: 0.55rem;
+  color: var(--omnio-muted, #6b7280);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 5%, transparent);
+}
+
+.desktop-empty-title {
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 560;
+}
+
+@media (max-width: 1023px) {
+  .table-empty-viewport {
+    width: calc(100vw - 4rem);
+  }
 }
 
 /* 表头容器，确保在滚动时覆盖表体内容 */
@@ -966,11 +1230,11 @@ defineExpose({
   position: sticky;
   top: 0;
   z-index: 200;
-  background-color: rgb(249 250 251);
+  background-color: var(--omnio-surface-subtle, #fafafa);
 }
 
 .dark .table-wrapper .table-header {
-  background-color: rgb(31 41 55);
+  background-color: var(--omnio-surface-subtle, #272727);
 }
 
 /* 表体保持在表头下方 */
@@ -984,11 +1248,11 @@ defineExpose({
   position: sticky;
   top: 0;
   z-index: 210; /* 必须高于所有表体内容 */
-  background-color: rgb(249 250 251);
+  background-color: var(--omnio-surface-subtle, #fafafa);
 }
 
 .dark .sticky-header-cell {
-  background-color: rgb(31 41 55);
+  background-color: var(--omnio-surface-subtle, #272727);
 }
 
 /* Sticky 列基础样式 */
@@ -1024,20 +1288,20 @@ defineExpose({
 
 /* 表体 sticky 列背景 */
 tbody .sticky-col {
-  background-color: white;
+  background-color: var(--omnio-surface, #fff);
 }
 
 .dark tbody .sticky-col {
-  background-color: rgb(17 24 39);
+  background-color: var(--omnio-surface, #1f1f1f);
 }
 
 /* hover 状态保持 */
 tbody tr:hover .sticky-col {
-  background-color: rgb(249 250 251);
+  background-color: color-mix(in srgb, var(--omnio-foreground, #111827) 4%, var(--omnio-surface, #fff));
 }
 
 .dark tbody tr:hover .sticky-col {
-  background-color: rgb(31 41 55);
+  background-color: color-mix(in srgb, var(--omnio-foreground, #f8fafc) 5%, var(--omnio-surface, #1f1f1f));
 }
 
 /* 阴影只在可滚动时显示 */
@@ -1088,6 +1352,15 @@ tbody tr:hover .sticky-col {
 
 .dark .is-scrollable .sticky-col-right::before {
   background: linear-gradient(to left, rgba(0, 0, 0, 0.2), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-data-row,
+  .data-table tbody tr,
+  .skeleton-line {
+    transition-duration: 1ms;
+    animation-duration: 1ms;
+  }
 }
 </style>
 

@@ -1,67 +1,68 @@
 <template>
-  <div
-    class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-dark-700 dark:bg-dark-800 sm:px-6"
-  >
-    <div class="flex flex-1 items-center justify-between sm:hidden">
+  <div class="pagination-shell">
+    <div class="mobile-pagination">
       <!-- Mobile pagination -->
       <button
         @click="goToPage(page - 1)"
-        :disabled="page === 1"
-        class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
+        :disabled="page <= 1"
+        type="button"
+        class="pagination-button pagination-icon-button"
+        :aria-label="t('pagination.previous')"
       >
-        {{ t('pagination.previous') }}
+        <Icon name="chevronLeft" size="md" />
       </button>
-      <span class="text-sm text-gray-700 dark:text-gray-300">
-        {{ t('pagination.pageOf', { page, total: totalPages }) }}
+      <span class="mobile-page-label" aria-live="polite">
+        {{ t('pagination.pageOf', { page, total: displayTotalPages }) }}
       </span>
       <button
         @click="goToPage(page + 1)"
-        :disabled="page === totalPages"
-        class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
+        :disabled="page >= displayTotalPages"
+        type="button"
+        class="pagination-button pagination-icon-button"
+        :aria-label="t('pagination.next')"
       >
-        {{ t('pagination.next') }}
+        <Icon name="chevronRight" size="md" />
       </button>
     </div>
 
-    <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+    <div class="desktop-pagination">
       <!-- Desktop pagination info -->
-      <div class="flex items-center space-x-4">
-        <p class="text-sm text-gray-700 dark:text-gray-300">
+      <div class="pagination-meta">
+        <p class="pagination-results">
           {{ t('pagination.showing') }}
-          <span class="font-medium">{{ fromItem }}</span>
+          <span>{{ fromItem }}</span>
           {{ t('pagination.to') }}
-          <span class="font-medium">{{ toItem }}</span>
+          <span>{{ toItem }}</span>
           {{ t('pagination.of') }}
-          <span class="font-medium">{{ total }}</span>
+          <span>{{ total }}</span>
           {{ t('pagination.results') }}
         </p>
 
         <!-- Page size selector -->
-        <div v-if="showPageSizeSelector" class="flex items-center space-x-2">
-          <span class="text-sm text-gray-700 dark:text-gray-300"
-            >{{ t('pagination.perPage') }}:</span
-          >
-          <div class="page-size-select w-20">
+        <div v-if="showPageSizeSelector" class="page-size-control">
+          <span>{{ t('pagination.perPage') }}</span>
+          <div class="page-size-select">
             <Select
               :model-value="pageSize"
               :options="pageSizeSelectOptions"
+              :searchable="false"
               @update:model-value="handlePageSizeChange"
             />
           </div>
         </div>
 
-        <div v-if="showJump" class="flex items-center space-x-2">
-          <span class="text-sm text-gray-700 dark:text-gray-300">{{ t('pagination.jumpTo') }}</span>
+        <div v-if="showJump" class="page-jump-control">
+          <span>{{ t('pagination.jumpTo') }}</span>
           <input
             v-model="jumpPage"
             type="number"
             min="1"
-            :max="totalPages"
-            class="input w-20 text-sm"
+            :max="displayTotalPages"
+            class="page-jump-input"
             :placeholder="t('pagination.jumpPlaceholder')"
             @keyup.enter="submitJump"
           />
-          <button type="button" class="btn btn-ghost btn-sm" @click="submitJump">
+          <button type="button" class="pagination-button page-jump-button" @click="submitJump">
             {{ t('pagination.jumpAction') }}
           </button>
         </div>
@@ -69,45 +70,44 @@
 
       <!-- Desktop pagination buttons -->
       <nav
-        class="relative z-0 inline-flex -space-x-px rounded-md shadow-sm"
+        class="pagination-nav"
         aria-label="Pagination"
       >
         <!-- Previous button -->
         <button
           @click="goToPage(page - 1)"
-          :disabled="page === 1"
-          class="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-400 dark:hover:bg-dark-600"
+          :disabled="page <= 1"
+          type="button"
+          class="pagination-button pagination-icon-button"
           :aria-label="t('pagination.previous')"
         >
           <Icon name="chevronLeft" size="md" />
         </button>
 
         <!-- Page numbers -->
-        <button
-          v-for="(pageNum, index) in visiblePages"
-          :key="`${pageNum}-${index}`"
-          @click="typeof pageNum === 'number' && goToPage(pageNum)"
-          :disabled="typeof pageNum !== 'number'"
-          :class="[
-            'relative inline-flex items-center border px-4 py-2 text-sm font-medium',
-            pageNum === page
-              ? 'z-10 border-primary-500 bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-300 dark:hover:bg-dark-600',
-            typeof pageNum !== 'number' && 'cursor-default'
-          ]"
-          :aria-label="
-            typeof pageNum === 'number' ? t('pagination.goToPage', { page: pageNum }) : undefined
-          "
-          :aria-current="pageNum === page ? 'page' : undefined"
-        >
-          {{ pageNum }}
-        </button>
+        <template v-for="(pageNum, index) in visiblePages" :key="`${pageNum}-${index}`">
+          <button
+            v-if="typeof pageNum === 'number'"
+            @click="goToPage(pageNum)"
+            type="button"
+            :class="[
+              'pagination-button pagination-page-button',
+              pageNum === page && 'pagination-page-button-active'
+            ]"
+            :aria-label="t('pagination.goToPage', { page: pageNum })"
+            :aria-current="pageNum === page ? 'page' : undefined"
+          >
+            {{ pageNum }}
+          </button>
+          <span v-else class="pagination-ellipsis" aria-hidden="true">…</span>
+        </template>
 
         <!-- Next button -->
         <button
           @click="goToPage(page + 1)"
-          :disabled="page === totalPages"
-          class="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-400 dark:hover:bg-dark-600"
+          :disabled="page >= displayTotalPages"
+          type="button"
+          class="pagination-button pagination-icon-button"
           :aria-label="t('pagination.next')"
         >
           <Icon name="chevronRight" size="md" />
@@ -150,6 +150,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
+const displayTotalPages = computed(() => Math.max(1, totalPages.value))
 
 const fromItem = computed(() => {
   if (props.total === 0) return 0
@@ -180,7 +181,7 @@ const jumpPage = ref('')
 const visiblePages = computed(() => {
   const pages: (number | string)[] = []
   const maxVisible = 7
-  const total = totalPages.value
+  const total = displayTotalPages.value
 
   if (total <= maxVisible) {
     // Show all pages if total is small
@@ -217,7 +218,7 @@ const visiblePages = computed(() => {
 })
 
 const goToPage = (newPage: number) => {
-  if (newPage >= 1 && newPage <= totalPages.value && newPage !== props.page) {
+  if (newPage >= 1 && newPage <= displayTotalPages.value && newPage !== props.page) {
     emit('update:page', newPage)
   }
 }
@@ -234,14 +235,199 @@ const submitJump = () => {
   if (!value) return
   const pageNum = Number.parseInt(value, 10)
   if (Number.isNaN(pageNum)) return
-  const nextPage = Math.min(Math.max(pageNum, 1), totalPages.value)
+  const nextPage = Math.min(Math.max(pageNum, 1), displayTotalPages.value)
   jumpPage.value = ''
   goToPage(nextPage)
 }
 </script>
 
 <style scoped>
+.pagination-shell {
+  width: 100%;
+  padding: 0.5rem 0.25rem;
+}
+
+.mobile-pagination {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.mobile-page-label,
+.pagination-results,
+.page-size-control,
+.page-jump-control {
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.mobile-page-label,
+.pagination-results span,
+.pagination-page-button,
+.page-size-select,
+.page-jump-input {
+  font-variant-numeric: tabular-nums;
+}
+
+.desktop-pagination {
+  display: none;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pagination-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pagination-results {
+  white-space: nowrap;
+}
+
+.pagination-results span {
+  color: var(--omnio-foreground, #111827);
+  font-weight: 600;
+}
+
+.page-size-control,
+.page-jump-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.page-size-select {
+  width: 4.4rem;
+}
+
 .page-size-select :deep(.select-trigger) {
-  @apply px-3 py-1.5 text-sm;
+  min-height: 2rem;
+  height: 2rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.625rem;
+  font-size: 0.8rem;
+  font-weight: 550;
+}
+
+.page-jump-input {
+  width: 4rem;
+  height: 2rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0 0.5rem;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+  outline: none;
+}
+
+.page-jump-input:focus-visible {
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 22%, transparent);
+}
+
+.pagination-nav {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pagination-button {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+  color: var(--omnio-muted, #6b7280);
+  background: var(--omnio-surface, #fff);
+  font-size: 0.8rem;
+  line-height: 1;
+  font-weight: 550;
+  outline: none;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.pagination-button:hover:not(:disabled) {
+  color: var(--omnio-foreground, #111827);
+  border-color: var(--omnio-border-strong, #d1d5db);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 5%, var(--omnio-surface, #fff));
+}
+
+.pagination-button:focus-visible {
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 22%, transparent);
+}
+
+.pagination-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.pagination-icon-button,
+.pagination-page-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+.pagination-page-button {
+  min-width: 2rem;
+  width: auto;
+  padding: 0 0.45rem;
+}
+
+.pagination-page-button-active,
+.pagination-page-button-active:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--omnio-primary-strong, #2563eb);
+  background: var(--omnio-primary-strong, #2563eb);
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8rem;
+}
+
+.page-jump-button {
+  padding: 0 0.65rem;
+}
+
+@media (max-width: 900px) {
+  .pagination-results {
+    display: none;
+  }
+
+  .pagination-meta {
+    gap: 0.75rem;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-pagination {
+    display: none;
+  }
+
+  .desktop-pagination {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagination-button {
+    transition-duration: 1ms;
+  }
 }
 </style>

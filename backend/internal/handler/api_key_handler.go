@@ -284,10 +284,25 @@ func (h *APIKeyHandler) GetAvailableGroups(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	entitlements, err := h.apiKeyService.GetUserGroupEntitlements(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
 
 	out := make([]dto.Group, 0, len(groups))
 	for i := range groups {
-		out = append(out, *dto.GroupFromService(&groups[i]))
+		item := *dto.GroupFromService(&groups[i])
+		if entitlement, ok := entitlements[groups[i].ID]; ok {
+			item.PersonalRateMultiplier = entitlement.PersonalRateMultiplier
+			item.ProRateMultiplier = entitlement.ProRateMultiplier
+			effective := entitlement.EffectiveRateMultiplier
+			item.EffectiveRateMultiplier = &effective
+			item.ProOnly = entitlement.ProOnly
+			item.ProAccess = entitlement.ProAccess
+			item.ProLevelName = entitlement.ProLevelName
+		}
+		out = append(out, item)
 	}
 	response.Success(c, out)
 }
@@ -308,4 +323,22 @@ func (h *APIKeyHandler) GetUserGroupRates(c *gin.Context) {
 	}
 
 	response.Success(c, rates)
+}
+
+// GetUserGroupEntitlements returns Omnio Pro-aware effective rates without
+// changing the legacy manual user-rate endpoint.
+// GET /api/v1/groups/entitlements
+func (h *APIKeyHandler) GetUserGroupEntitlements(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	entitlements, err := h.apiKeyService.GetUserGroupEntitlements(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, entitlements)
 }

@@ -5,23 +5,23 @@
     width="normal"
     @close="handleClose"
   >
-    <div class="space-y-4">
+    <div class="account-test-stack">
       <!-- Account Info Card -->
       <div
         v-if="account"
-        class="flex items-center justify-between rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 p-3 dark:border-dark-500 dark:from-dark-700 dark:to-dark-600"
+        class="test-account-summary"
       >
         <div class="flex items-center gap-3">
           <div
-            class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-600"
+            class="test-account-icon"
           >
-            <Icon name="play" size="md" class="text-white" :stroke-width="2" />
+            <Icon name="play" size="md" class="text-primary-600 dark:text-primary-400" :stroke-width="2" />
           </div>
           <div>
             <div class="font-semibold text-gray-900 dark:text-gray-100">{{ account.name }}</div>
             <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
               <span
-                class="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase dark:bg-dark-500"
+                class="platform-badge"
               >
                 {{ account.type }}
               </span>
@@ -31,10 +31,10 @@
         </div>
         <span
           :class="[
-            'rounded-full px-2.5 py-1 text-xs font-semibold',
+            'test-status',
             account.status === 'active'
-              ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
-              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+              ? 'test-status-active'
+              : 'test-status-neutral'
           ]"
         >
           {{ account.status }}
@@ -81,7 +81,7 @@
       <div class="group relative">
         <div
           ref="terminalRef"
-          class="max-h-[240px] min-h-[120px] overflow-y-auto rounded-xl border border-gray-700 bg-gray-900 p-4 font-mono text-sm dark:border-gray-800 dark:bg-black"
+          class="test-terminal max-h-[240px] min-h-[120px] overflow-y-auto p-4 font-mono text-sm"
         >
           <!-- Status Line -->
           <div v-if="status === 'idle'" class="flex items-center gap-2 text-gray-500">
@@ -123,8 +123,9 @@
         <!-- Copy Button -->
         <button
           v-if="outputLines.length > 0"
+          type="button"
           @click="copyOutput"
-          class="absolute right-2 top-2 rounded-lg bg-gray-800/80 p-1.5 text-gray-400 opacity-0 transition-all hover:bg-gray-700 hover:text-white group-hover:opacity-100"
+          class="terminal-copy-button"
           :title="t('admin.accounts.copyOutput')"
         >
           <Icon name="link" size="sm" :stroke-width="2" />
@@ -139,7 +140,7 @@
           <div
             v-for="(image, index) in generatedImages"
             :key="`${image.url}-${index}`"
-            class="group/img relative cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:border-primary-300 hover:shadow-md dark:border-dark-500 dark:bg-dark-700"
+            class="test-image-card group/img"
             @click="previewImageUrl = image.url"
           >
             <img :src="image.url" :alt="`test-image-${index + 1}`" class="max-h-[360px] w-full object-contain" />
@@ -162,7 +163,9 @@
             @click.self="previewImageUrl = ''"
           >
             <button
-              class="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
+              type="button"
+              class="lightbox-close"
+              :aria-label="t('common.close')"
               @click="previewImageUrl = ''"
             >
               <Icon name="x" size="lg" :stroke-width="2" />
@@ -170,14 +173,14 @@
             <img
               :src="previewImageUrl"
               alt="preview"
-              class="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+              class="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-lg"
             />
           </div>
         </Transition>
       </Teleport>
 
       <!-- Test Info -->
-      <div class="flex items-center justify-between px-1 text-xs text-gray-500 dark:text-gray-400">
+      <div class="test-meta">
         <div class="flex items-center gap-3">
           <span class="flex items-center gap-1">
             <Icon name="grid" size="sm" :stroke-width="2" />
@@ -196,25 +199,27 @@
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-3">
+      <div class="test-footer-actions">
         <button
+          type="button"
           @click="handleClose"
-          class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-dark-600 dark:text-gray-300 dark:hover:bg-dark-500"
+          class="btn btn-secondary"
         >
           {{ t('common.close') }}
         </button>
         <button
+          type="button"
           @click="startTest"
           :disabled="status === 'connecting' || !selectedModelId"
           :class="[
-            'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+            'test-action-button',
             status === 'connecting' || !selectedModelId
-              ? 'cursor-not-allowed bg-primary-400 text-white'
+              ? 'test-action-disabled'
               : status === 'success'
-                ? 'bg-green-500 text-white hover:bg-green-600'
+                ? 'test-action-success'
                 : status === 'error'
-                  ? 'bg-orange-500 text-white hover:bg-orange-600'
-                  : 'bg-primary-500 text-white hover:bg-primary-600'
+                  ? 'test-action-warning'
+                  : 'test-action-default'
           ]"
         >
           <Icon
@@ -571,7 +576,224 @@ const copyOutput = () => {
 }
 </script>
 
-<style>
+<style scoped>
+.account-test-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.test-account-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 2.5%, var(--omnio-surface, #fff));
+}
+
+.test-account-icon {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--omnio-primary, #3b82f6) 16%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 8%, transparent);
+}
+
+.platform-badge,
+.test-status {
+  display: inline-flex;
+  height: 1.25rem;
+  align-items: center;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 9999px;
+  padding: 0 0.4rem;
+  font-size: 0.65rem;
+  line-height: 1;
+  font-weight: 560;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.platform-badge,
+.test-status-neutral {
+  color: var(--omnio-muted, #6b7280);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 4%, transparent);
+}
+
+.test-status-active {
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.18);
+  background: rgba(16, 185, 129, 0.09);
+}
+
+.test-terminal {
+  border: 1px solid color-mix(in srgb, var(--omnio-foreground, #111827) 16%, transparent);
+  border-radius: 0.65rem;
+  color: #d1d5db;
+  background: #111214;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.terminal-copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.45rem;
+  color: #9ca3af;
+  background: rgba(17, 24, 39, 0.82);
+  opacity: 0;
+  outline: none;
+  transition: color 140ms ease, background-color 140ms ease, opacity 140ms ease, box-shadow 140ms ease;
+}
+
+.group:hover .terminal-copy-button,
+.terminal-copy-button:focus-visible {
+  opacity: 1;
+}
+
+.terminal-copy-button:hover {
+  color: #fff;
+  background: #1f2937;
+}
+
+.terminal-copy-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+}
+
+.test-image-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.65rem;
+  background: var(--omnio-surface, #fff);
+  box-shadow: none;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.test-image-card:hover {
+  border-color: var(--omnio-border-strong, #d1d5db);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 2.5%, var(--omnio-surface, #fff));
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.48);
+  outline: none;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.lightbox-close:hover {
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.lightbox-close:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.test-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.75rem;
+}
+
+.test-footer-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.test-action-button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.85rem;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 550;
+  outline: none;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.test-action-default {
+  border-color: var(--omnio-primary-strong, #2563eb);
+  background: var(--omnio-primary-strong, #2563eb);
+}
+
+.test-action-success {
+  border-color: #059669;
+  background: #059669;
+}
+
+.test-action-warning {
+  border-color: #d97706;
+  background: #d97706;
+}
+
+.test-action-disabled {
+  cursor: not-allowed;
+  border-color: color-mix(in srgb, var(--omnio-primary, #3b82f6) 55%, transparent);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 55%, var(--omnio-surface, #fff));
+}
+
+.test-action-button:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 25%, transparent);
+}
+
+:global(.dark) .test-status-active {
+  color: #6ee7b7;
+}
+
+@media (max-width: 640px) {
+  .test-account-summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .test-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .test-footer-actions {
+    flex-direction: column-reverse;
+  }
+
+  .test-footer-actions > button {
+    width: 100%;
+  }
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;

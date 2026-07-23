@@ -1,53 +1,37 @@
 <template>
   <Teleport to="body">
     <div
-      class="pointer-events-none fixed right-4 top-4 z-[9999] space-y-3"
+      class="toast-viewport"
       aria-live="polite"
       aria-atomic="true"
     >
       <TransitionGroup
-        enter-active-class="transition ease-out duration-300"
-        enter-from-class="opacity-0 translate-x-full"
-        enter-to-class="opacity-100 translate-x-0"
-        leave-active-class="transition ease-in duration-200"
-        leave-from-class="opacity-100 translate-x-0"
-        leave-to-class="opacity-0 translate-x-full"
+        name="toast-item"
       >
         <div
           v-for="toast in toasts"
           :key="toast.id"
-          :class="[
-            'pointer-events-auto min-w-[320px] max-w-md overflow-hidden rounded-lg shadow-lg',
-            'bg-white dark:bg-dark-800',
-            'border-l-4',
-            getBorderColor(toast.type)
-          ]"
+          :class="['toast-card', `toast-card-${toast.type}`]"
+          :role="toast.type === 'error' ? 'alert' : 'status'"
+          :aria-live="toast.type === 'error' ? 'assertive' : 'polite'"
         >
-          <div class="p-4">
-            <div class="flex items-start gap-3">
+          <div class="toast-card-content">
+            <div class="toast-card-row">
               <!-- Icon -->
-              <div class="mt-0.5 flex-shrink-0">
+              <div class="toast-icon">
                 <Icon
                   :name="getToastIconName(toast.type)"
-                  size="md"
-                  :class="getIconColor(toast.type)"
+                  size="sm"
                   aria-hidden="true"
                 />
               </div>
 
               <!-- Content -->
-              <div class="min-w-0 flex-1">
-                <p v-if="toast.title" class="text-sm font-semibold text-gray-900 dark:text-white">
+              <div class="toast-copy">
+                <p v-if="toast.title" class="toast-title">
                   {{ toast.title }}
                 </p>
-                <p
-                  :class="[
-                    'text-sm leading-relaxed',
-                    toast.title
-                      ? 'mt-1 text-gray-600 dark:text-gray-300'
-                      : 'text-gray-900 dark:text-white'
-                  ]"
-                >
+                <p :class="['toast-message', toast.title && 'toast-message-with-title']">
                   {{ toast.message }}
                 </p>
               </div>
@@ -55,20 +39,13 @@
               <!-- Close button -->
               <button
                 @click="removeToast(toast.id)"
-                class="-m-1 flex-shrink-0 rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-dark-700 dark:hover:text-gray-300"
+                type="button"
+                class="toast-close"
                 aria-label="Close notification"
               >
                 <Icon name="x" size="sm" />
               </button>
             </div>
-          </div>
-
-          <!-- Progress bar -->
-          <div v-if="toast.duration" class="h-1 bg-gray-100 dark:bg-dark-700">
-            <div
-              :class="['h-full toast-progress', getProgressBarColor(toast.type)]"
-              :style="{ animationDuration: `${toast.duration}ms` }"
-            ></div>
           </div>
         </div>
       </TransitionGroup>
@@ -99,55 +76,181 @@ const getToastIconName = (type: string): 'checkCircle' | 'xCircle' | 'exclamatio
   }
 }
 
-const getIconColor = (type: string): string => {
-  const colors: Record<string, string> = {
-    success: 'text-green-500',
-    error: 'text-red-500',
-    warning: 'text-yellow-500',
-    info: 'text-blue-500'
-  }
-  return colors[type] || colors.info
-}
-
-const getBorderColor = (type: string): string => {
-  const colors: Record<string, string> = {
-    success: 'border-green-500',
-    error: 'border-red-500',
-    warning: 'border-yellow-500',
-    info: 'border-blue-500'
-  }
-  return colors[type] || colors.info
-}
-
-const getProgressBarColor = (type: string): string => {
-  const colors: Record<string, string> = {
-    success: 'bg-green-500',
-    error: 'bg-red-500',
-    warning: 'bg-yellow-500',
-    info: 'bg-blue-500'
-  }
-  return colors[type] || colors.info
-}
-
 const removeToast = (id: string) => {
   appStore.hideToast(id)
 }
 </script>
 
 <style scoped>
-.toast-progress {
-  width: 100%;
-  animation-name: toast-progress-shrink;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
+.toast-viewport {
+  pointer-events: none;
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  z-index: 9999;
+  display: flex;
+  width: min(26rem, calc(100vw - 2rem));
+  flex-direction: column;
+  gap: 0.5rem;
+  transform: translateX(-50%);
 }
 
-@keyframes toast-progress-shrink {
-  from {
-    width: 100%;
+.toast-card {
+  pointer-events: auto;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.65rem;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12), 0 2px 7px rgba(15, 23, 42, 0.07);
+}
+
+.toast-card-success {
+  border-color: color-mix(in srgb, #10b981 35%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, #10b981 10%, var(--omnio-surface, #fff));
+}
+
+.toast-card-error {
+  border-color: color-mix(in srgb, #ef4444 35%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, #ef4444 9%, var(--omnio-surface, #fff));
+}
+
+.toast-card-warning {
+  border-color: color-mix(in srgb, #f59e0b 38%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, #f59e0b 11%, var(--omnio-surface, #fff));
+}
+
+.toast-card-info {
+  border-color: color-mix(in srgb, #3b82f6 35%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, #3b82f6 9%, var(--omnio-surface, #fff));
+}
+
+.toast-card-content {
+  padding: 0.75rem;
+}
+
+.toast-card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.toast-icon {
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.05rem;
+}
+
+.toast-card-success .toast-icon {
+  color: #059669;
+}
+
+.toast-card-error .toast-icon {
+  color: #dc2626;
+}
+
+.toast-card-warning .toast-icon {
+  color: #d97706;
+}
+
+.toast-card-info .toast-icon {
+  color: #2563eb;
+}
+
+.toast-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.toast-title {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.toast-message {
+  overflow-wrap: anywhere;
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.toast-message-with-title {
+  margin-top: 0.2rem;
+  color: var(--omnio-muted, #6b7280);
+}
+
+.toast-close {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin: -0.25rem -0.25rem -0.25rem 0;
+  border-radius: 0.45rem;
+  color: var(--omnio-muted, #6b7280);
+  outline: none;
+  transition: color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.toast-close:hover {
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 6%, transparent);
+}
+
+.toast-close:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 24%, transparent);
+}
+
+:global(.dark) .toast-card {
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38), 0 2px 8px rgba(0, 0, 0, 0.24);
+}
+
+:global(.dark) .toast-card-success .toast-icon {
+  color: #6ee7b7;
+}
+
+:global(.dark) .toast-card-error .toast-icon {
+  color: #fca5a5;
+}
+
+:global(.dark) .toast-card-warning .toast-icon {
+  color: #fcd34d;
+}
+
+:global(.dark) .toast-card-info .toast-icon {
+  color: #93c5fd;
+}
+
+.toast-item-enter-active,
+.toast-item-leave-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.toast-item-enter-from,
+.toast-item-leave-to {
+  opacity: 0;
+  transform: translateY(-0.5rem) scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .toast-viewport {
+    top: 0.75rem;
+    width: calc(100vw - 1.5rem);
   }
-  to {
-    width: 0%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-item-enter-active,
+  .toast-item-leave-active,
+  .toast-close {
+    transition-duration: 1ms;
   }
 }
 </style>

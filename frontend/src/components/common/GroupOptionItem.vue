@@ -11,6 +11,10 @@
         :platform="platform"
         :subscription-type="subscriptionType"
         :show-rate="false"
+        :pro-rate-multiplier="proRateMultiplier"
+        :effective-rate-multiplier="effectiveRateMultiplier"
+        :pro-only="proOnly"
+        :pro-level-name="proLevelName"
         class="groupOptionItemBadge"
       />
       <!-- Row 2: description with top spacing -->
@@ -27,12 +31,13 @@
       <div class="flex shrink-0 flex-col items-end gap-1">
         <!-- Rate pill (platform color) -->
         <span v-if="rateMultiplier !== undefined" :class="['inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold', ratePillClass]">
-          <template v-if="hasCustomRate">
-            <span class="mr-1 line-through opacity-50">{{ rateMultiplier }}x</span>
-            <span class="font-bold">{{ userRateMultiplier }}x</span>
+          <template v-if="hasAdjustedRate">
+            <span class="mr-1 line-through opacity-50">{{ formatCompactMultiplier(rateMultiplier ?? 1) }}x</span>
+            <span class="font-bold">{{ formatCompactMultiplier(resolvedEffectiveRate ?? 1) }}x</span>
+            <span class="ml-1 opacity-70">{{ t('admin.groups.rateLabel') }}</span>
           </template>
           <template v-else>
-            {{ rateMultiplier }}x {{ t('admin.groups.rateLabel') }}
+            {{ formatCompactMultiplier(rateMultiplier ?? 1) }}x {{ t('admin.groups.rateLabel') }}
           </template>
         </span>
         <span
@@ -65,6 +70,7 @@ import GroupBadge from './GroupBadge.vue'
 import type { SubscriptionType, GroupPlatform } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
+import { formatCompactMultiplier } from '@/utils/formatters'
 
 const { t } = useI18n()
 
@@ -74,6 +80,11 @@ interface Props {
   subscriptionType?: SubscriptionType
   rateMultiplier?: number
   userRateMultiplier?: number | null
+  personalRateMultiplier?: number | null
+  proRateMultiplier?: number | null
+  effectiveRateMultiplier?: number | null
+  proOnly?: boolean
+  proLevelName?: string
   peakRateEnabled?: boolean
   peakStart?: string
   peakEnd?: string
@@ -88,17 +99,24 @@ const props = withDefaults(defineProps<Props>(), {
   selected: false,
   showCheckmark: true,
   userRateMultiplier: null,
+  personalRateMultiplier: null,
+  proRateMultiplier: null,
+  effectiveRateMultiplier: null,
+  proOnly: false,
+  proLevelName: '',
   peakRateEnabled: false
 })
 
-// Whether user has a custom rate different from default
-const hasCustomRate = computed(() => {
-  return (
-    props.userRateMultiplier !== null &&
-    props.userRateMultiplier !== undefined &&
-    props.rateMultiplier !== undefined &&
-    props.userRateMultiplier !== props.rateMultiplier
-  )
+const resolvedPersonalRate = computed(() => props.personalRateMultiplier ?? props.userRateMultiplier)
+
+const resolvedEffectiveRate = computed(() => {
+  return props.effectiveRateMultiplier ?? resolvedPersonalRate.value ?? props.proRateMultiplier ?? props.rateMultiplier
+})
+
+const hasAdjustedRate = computed(() => {
+  return props.rateMultiplier !== undefined &&
+    resolvedEffectiveRate.value !== undefined &&
+    Math.abs(resolvedEffectiveRate.value - props.rateMultiplier) > 1e-9
 })
 
 const appStore = useAppStore()

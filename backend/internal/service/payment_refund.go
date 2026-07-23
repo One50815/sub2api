@@ -255,6 +255,10 @@ func (s *PaymentService) PrepareRefund(ctx context.Context, oid int64, amt float
 }
 
 func (s *PaymentService) prepDeduct(ctx context.Context, o *dbent.PaymentOrder, p *RefundPlan, force bool) *RefundResult {
+	if o.OrderType == payment.OrderTypeMembership {
+		p.DeductionType = payment.DeductionTypeMembership
+		return nil
+	}
 	if o.OrderType == payment.OrderTypeSubscription {
 		p.DeductionType = payment.DeductionTypeSubscription
 		if o.SubscriptionGroupID != nil && o.SubscriptionDays != nil {
@@ -322,6 +326,13 @@ func (s *PaymentService) ExecuteRefund(ctx context.Context, p *RefundPlan) (*Ref
 			slog.Warn("skipping subscription deduction on retry (previous rollback failed)", "orderID", p.OrderID)
 			p.SubDaysToDeduct = 0
 		}
+	}
+	if p.DeductionType == payment.DeductionTypeMembership && s.membershipService != nil {
+		if err := s.membershipService.RevokeOrderGrants(ctx, p.OrderID); err != nil {
+			s.restoreStatus(ctx, p)
+			return nil, fmt.Errorf("revoke membership grant: %w", err)
+		}
+		p.MembershipRevoked = true
 	}
 	resp, err := s.gwRefund(ctx, p)
 	if err != nil {
@@ -504,6 +515,12 @@ func (s *PaymentService) applyRefundFinalDeduction(ctx context.Context, p *Refun
 			}
 		}
 	}
+	if p.DeductionType == payment.DeductionTypeMembership && s.membershipService != nil {
+		if err := s.membershipService.RevokeOrderGrants(ctx, p.OrderID); err != nil {
+			return fmt.Errorf("revoke membership grant: %w", err)
+		}
+		p.MembershipRevoked = true
+	}
 	return nil
 }
 
@@ -633,6 +650,12 @@ func (s *PaymentService) RollbackRefund(ctx context.Context, p *RefundPlan, gErr
 		if _, err := s.subscriptionSvc.ExtendSubscription(ctx, p.SubscriptionID, p.SubDaysToDeduct); err != nil {
 			slog.Error("[CRITICAL] subscription rollback failed", "orderID", p.OrderID, "subID", p.SubscriptionID, "days", p.SubDaysToDeduct, "error", err)
 			s.writeAuditLog(ctx, p.OrderID, "REFUND_ROLLBACK_FAILED", "admin", map[string]any{"gatewayError": psErrMsg(gErr), "rollbackError": psErrMsg(err), "subDaysDeducted": p.SubDaysToDeduct})
+			return false
+		}
+	}
+	if p.MembershipRevoked && s.membershipService != nil {
+		if err := s.membershipService.RestoreOrderGrants(ctx, p.OrderID); err != nil {
+			slog.Error("[CRITICAL] membership rollback failed", "orderID", p.OrderID, "error", err)
 			return false
 		}
 	}

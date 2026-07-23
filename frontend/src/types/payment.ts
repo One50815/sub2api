@@ -21,7 +21,7 @@ export type OrderStatus =
 
 export type PaymentType = 'alipay' | 'wxpay' | 'alipay_direct' | 'wxpay_direct' | 'stripe' | 'easypay' | 'airwallex'
 
-export type OrderType = 'balance' | 'subscription'
+export type OrderType = 'balance' | 'subscription' | 'membership'
 
 // ==================== Configuration ====================
 
@@ -66,6 +66,7 @@ export interface CheckoutInfoResponse {
   global_min: number
   global_max: number
   plans: SubscriptionPlan[]
+  membership_offers: import('./membership').MembershipOffer[]
   balance_disabled: boolean
   balance_recharge_multiplier: number
   /** Subscription CNY conversion rate (1 USD = X CNY); 0 = disabled, plan price is charged as-is */
@@ -132,6 +133,7 @@ export interface SubscriptionPlan {
   features: string[]
   for_sale: boolean
   sort_order: number
+  membership_benefit?: import('./membership').MembershipPlanBenefit | null
 }
 
 export interface PaymentChannel {

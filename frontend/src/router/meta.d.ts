@@ -55,6 +55,9 @@ declare module 'vue-router' {
      */
     requiresRiskControl?: boolean
 
+    /** Whether the user-facing ticket center must be enabled. */
+    requiresTicketCenter?: boolean
+
     /**
      * i18n key for the page title
      */

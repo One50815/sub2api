@@ -2,7 +2,8 @@
   <AppLayout>
     <div class="space-y-6">
       <!-- Header with Day Switcher -->
-      <div class="flex items-center justify-end">
+      <div class="page-header flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <h1 class="page-title">{{ t('nav.paymentDashboard') }}</h1>
         <div class="flex items-center gap-2">
           <div class="flex rounded-lg border border-gray-200 dark:border-dark-600">
             <button

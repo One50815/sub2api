@@ -124,7 +124,7 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 			return
 		}
 		// 专属分组授权校验：用户对该专属分组的授权被撤销后应拒绝（与主中间件一致，防止越权）。
-		if !validateAPIKeyGroupAllowed(apiKey) {
+		if !validateAPIKeyGroupAllowed(c.Request.Context(), apiKeyService, apiKey) {
 			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonAPIKeyGroupUnavailable)
 			MarkIngressRejected(c, IngressRejectGroupNotAllowed)
 			abortWithGoogleError(c, 403, "API Key 所属专属分组不再允许当前用户使用")
@@ -136,7 +136,7 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 			c.Set(string(ContextKeyAPIKey), apiKey)
 			c.Set(string(ContextKeyUser), AuthSubject{
 				UserID:      apiKey.User.ID,
-				Concurrency: apiKey.User.Concurrency,
+				Concurrency: apiKeyService.ResolveConcurrency(c.Request.Context(), apiKey.User.ID, apiKey.User.Concurrency),
 			})
 			c.Set(string(ContextKeyUserRole), apiKey.User.Role)
 			setGroupContext(c, apiKey.Group)
@@ -188,6 +188,16 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 				_, err = subscriptionService.ValidateAndCheckLimits(subscription, apiKey.Group)
 			}
 			if err != nil {
+				if subscription.UsesWalletAfterQuota(apiKey.Group) {
+					if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) {
+						abortWithGoogleError(c, 403, "Insufficient account balance")
+						return
+					}
+					subscription = nil
+					err = nil
+				}
+			}
+			if err != nil {
 				status := 403
 				if errors.Is(err, service.ErrDailyLimitExceeded) ||
 					errors.Is(err, service.ErrWeeklyLimitExceeded) ||
@@ -198,9 +208,12 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 				return
 			}
 
-			c.Set(string(ContextKeySubscription), subscription)
+			if subscription != nil {
+				c.Set(string(ContextKeySubscription), subscription)
+			}
 		} else {
-			if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) {
+			if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) &&
+				!apiKeyHasAvailableOmnioProQuota(c.Request.Context(), apiKeyService, apiKey) {
 				abortWithGoogleError(c, 403, "Insufficient account balance")
 				return
 			}
@@ -209,7 +222,7 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 		c.Set(string(ContextKeyAPIKey), apiKey)
 		c.Set(string(ContextKeyUser), AuthSubject{
 			UserID:      apiKey.User.ID,
-			Concurrency: apiKey.User.Concurrency,
+			Concurrency: apiKeyService.ResolveConcurrency(c.Request.Context(), apiKey.User.ID, apiKey.User.Concurrency),
 		})
 		c.Set(string(ContextKeyUserRole), apiKey.User.Role)
 		setGroupContext(c, apiKey.Group)

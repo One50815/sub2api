@@ -1,131 +1,113 @@
 <template>
-  <div class="relative flex min-h-screen flex-col bg-gray-50 dark:bg-dark-950">
-    <!-- Header (same pattern as HomeView) -->
-    <header class="relative z-20 px-6 py-4">
-      <nav class="mx-auto flex max-w-6xl items-center justify-between">
-        <router-link to="/home" class="flex items-center gap-3">
-          <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
-          </div>
-          <span class="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">{{ siteName }}</span>
+  <div class="key-usage-page">
+    <header class="key-usage-header">
+      <nav class="key-usage-nav">
+        <router-link to="/home" class="key-usage-brand">
+          <span class="key-usage-brand-logo">
+            <img :src="siteLogo || '/assets/brand/omnio-mark.svg?v=3'" alt="" />
+          </span>
+          <span>{{ siteName }}</span>
         </router-link>
-        <div class="flex items-center gap-3">
+        <div class="key-usage-actions">
           <LocaleSwitcher />
           <a
             v-if="docUrl"
             :href="docUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            class="key-usage-tool"
             :title="t('home.viewDocs')"
           >
-            <Icon name="book" size="md" />
+            <Icon name="book" size="sm" />
           </a>
           <button
+            type="button"
             @click="toggleTheme"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            class="key-usage-tool"
             :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
           >
-            <Icon v-if="isDark" name="sun" size="md" />
-            <Icon v-else name="moon" size="md" />
+            <Icon :name="isDark ? 'sun' : 'moon'" size="sm" />
           </button>
+          <router-link to="/login" class="btn btn-primary key-usage-sign-in">
+            {{ t('home.login') }}
+          </router-link>
         </div>
       </nav>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 w-full max-w-5xl mx-auto px-6 py-12">
-      <!-- Hero -->
-      <div class="text-center mb-12">
-        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3 text-gray-900 dark:text-white">
-          {{ t('keyUsage.title') }}
-        </h1>
-        <p class="text-gray-500 dark:text-dark-400 text-base max-w-md mx-auto">
-          {{ t('keyUsage.subtitle') }}
-        </p>
-      </div>
+    <main class="key-usage-main">
+      <section class="key-usage-hero">
+        <h1>{{ t('keyUsage.title') }}</h1>
+        <p>{{ t('keyUsage.subtitle') }}</p>
+      </section>
 
-      <!-- Input Section -->
-      <div class="max-w-xl mx-auto mb-14">
-        <div class="flex gap-3">
-          <div class="flex-1 relative">
-            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-500">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </div>
+      <section class="key-query-shell">
+        <div class="key-query-row">
+          <div class="key-query-input-wrap">
+            <Icon name="key" size="sm" class="key-query-leading-icon" :stroke-width="1.8" />
             <input
               v-model="apiKey"
               :type="keyVisible ? 'text' : 'password'"
               :placeholder="t('keyUsage.placeholder')"
-              class="input-ring w-full h-12 pl-12 pr-12 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all dark:border-dark-700 dark:bg-dark-900 dark:text-white dark:placeholder:text-dark-500"
+              class="input-ring key-query-input"
+              :aria-label="t('keyUsage.placeholder')"
               @keydown.enter="queryKey"
             />
             <button
+              type="button"
               @click="keyVisible = !keyVisible"
-              class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:text-dark-500 dark:hover:text-white transition-colors"
+              class="key-query-visibility"
+              :aria-label="keyVisible ? t('keyUsage.hideKey') : t('keyUsage.showKey')"
             >
-              <svg v-if="!keyVisible" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-              </svg>
-              <svg v-else class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
+              <Icon :name="keyVisible ? 'eye' : 'eyeOff'" size="sm" />
             </button>
           </div>
           <button
+            type="button"
             @click="queryKey"
             :disabled="isQuerying"
-            class="h-12 px-7 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-medium text-sm transition-all active:scale-[0.97] flex items-center gap-2 whitespace-nowrap disabled:opacity-60"
+            class="btn btn-primary key-query-button"
           >
-            <svg v-if="isQuerying" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/>
-              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-            </svg>
-            <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
+            <Icon :name="isQuerying ? 'refresh' : 'search'" size="sm" :class="{ 'animate-spin': isQuerying }" :stroke-width="2" />
             {{ isQuerying ? t('keyUsage.querying') : t('keyUsage.query') }}
           </button>
         </div>
-        <p class="text-xs text-gray-400 dark:text-dark-500 mt-3 text-center">
+        <p class="key-query-privacy">
           {{ t('keyUsage.privacyNote') }}
         </p>
 
-        <!-- Date Range Picker -->
-        <div v-if="showDatePicker" class="mt-4">
-          <div class="flex flex-wrap items-center gap-2 justify-center">
-            <span class="text-xs text-gray-500 dark:text-dark-400">{{ t('keyUsage.dateRange') }}</span>
+        <div v-if="showDatePicker" class="key-date-filter">
+          <div class="key-date-filter-row">
+            <span class="key-date-label">{{ t('keyUsage.dateRange') }}</span>
             <button
               v-for="range in dateRanges"
               :key="range.key"
+              type="button"
               @click="setDateRange(range.key)"
-              class="text-xs px-3 py-1.5 rounded-lg border transition-all"
-              :class="currentRange === range.key
-                ? 'bg-primary-500 text-white border-primary-500'
-                : 'border-gray-200 bg-white text-gray-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200 hover:border-primary-300 dark:hover:border-dark-600'"
+              class="key-date-option"
+              :class="{ 'is-active': currentRange === range.key }"
             >{{ range.label }}</button>
-            <div v-if="currentRange === 'custom'" class="flex items-center gap-2 ml-1">
+            <div v-if="currentRange === 'custom'" class="key-custom-date">
               <input
                 v-model="customStartDate"
                 type="date"
-                class="input-ring text-xs px-2 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-dark-700 dark:bg-dark-900 dark:text-white"
+                class="input-ring key-date-input"
               />
-              <span class="text-xs text-gray-400">-</span>
+              <span>–</span>
               <input
                 v-model="customEndDate"
                 type="date"
-                class="input-ring text-xs px-2 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-dark-700 dark:bg-dark-900 dark:text-white"
+                class="input-ring key-date-input"
               />
               <button
+                type="button"
                 @click="queryKey"
-                class="text-xs px-3 py-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600"
+                class="btn btn-primary key-date-apply"
               >{{ t('keyUsage.apply') }}</button>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Results Container -->
       <div v-if="showResults">
@@ -390,25 +372,24 @@
       </div>
     </main>
 
-    <!-- Footer (same pattern as HomeView) -->
-    <footer class="relative z-10 border-t border-gray-200/50 px-6 py-8 dark:border-dark-800/50">
-      <div class="mx-auto flex max-w-6xl flex-col items-center justify-center gap-4 text-center sm:flex-row sm:text-left">
-        <p class="text-sm text-gray-500 dark:text-dark-400">
+    <footer class="key-usage-footer">
+      <div class="key-usage-footer-inner">
+        <p>
           &copy; {{ currentYear }} {{ siteName }}. {{ t('home.footer.allRightsReserved') }}
         </p>
-        <div class="flex items-center gap-4">
+        <div class="key-usage-footer-links">
           <a
             v-if="docUrl"
             :href="docUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
+            class="key-usage-footer-link"
           >{{ t('home.docs') }}</a>
           <a
             :href="githubUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
+            class="key-usage-footer-link"
           >GitHub</a>
         </div>
       </div>
@@ -527,7 +508,7 @@ function setDailyUsageDays(days: 7 | 30 | 90) {
 
 const CIRCUMFERENCE = 2 * Math.PI * 68
 const RING_GRADIENTS = [
-  { from: '#14b8a6', to: '#5eead4' },
+  { from: '#4295ed', to: '#93cefd' },
   { from: '#6366F1', to: '#A5B4FC' },
   { from: '#10B981', to: '#6EE7B7' },
   { from: '#F59E0B', to: '#FCD34D' },
@@ -940,13 +921,357 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.key-usage-page {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  color: var(--omnio-foreground);
+  background: var(--omnio-bg);
+}
+
+.key-usage-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: 4rem;
+  pointer-events: none;
+}
+
+.key-usage-nav {
+  display: flex;
+  width: min(100%, 80rem);
+  height: 4rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  pointer-events: auto;
+  border-bottom: 1px solid color-mix(in srgb, var(--omnio-border) 68%, transparent);
+  background: color-mix(in srgb, var(--omnio-bg) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.key-usage-brand {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--omnio-foreground);
+  font-size: 0.875rem;
+  font-weight: 630;
+  text-decoration: none;
+}
+
+.key-usage-brand-logo {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 1.75rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0.45rem;
+}
+
+.key-usage-brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.key-usage-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.key-usage-tool {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.5rem;
+  color: var(--omnio-muted);
+  background: transparent;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.key-usage-tool:hover {
+  color: var(--omnio-foreground);
+  background: var(--omnio-surface-subtle);
+}
+
+.key-usage-sign-in {
+  min-height: 2rem;
+  margin-left: 0.35rem;
+  padding: 0.35rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.key-usage-main {
+  width: min(100%, 72rem);
+  flex: 1;
+  margin: 0 auto;
+  padding: 7.25rem 1.5rem 4rem;
+}
+
+.key-usage-hero {
+  max-width: 44rem;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+
+.key-usage-hero h1 {
+  margin: 0;
+  color: var(--omnio-foreground);
+  font-size: clamp(2rem, 5vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.key-usage-hero p {
+  max-width: 32rem;
+  margin: 0.75rem auto 0;
+  color: var(--omnio-muted);
+  font-size: 0.925rem;
+  line-height: 1.6;
+}
+
+.key-query-shell {
+  max-width: 44rem;
+  margin: 0 auto 3.5rem;
+  padding: 1rem;
+  border: 1px solid var(--omnio-border);
+  border-radius: 0.875rem;
+  background: var(--omnio-surface);
+  box-shadow: var(--omnio-card-shadow);
+}
+
+.key-query-row {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.key-query-input-wrap {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+
+.key-query-leading-icon,
+.key-query-visibility {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.key-query-leading-icon {
+  left: 0.85rem;
+  color: var(--omnio-muted);
+  pointer-events: none;
+}
+
+.key-query-input {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 2.6rem;
+  border: 1px solid var(--omnio-border-strong);
+  border-radius: 0.5rem;
+  color: var(--omnio-foreground);
+  background: var(--omnio-surface);
+  font-size: 0.82rem;
+}
+
+.key-query-input::placeholder {
+  color: color-mix(in srgb, var(--omnio-muted) 76%, transparent);
+}
+
+.key-query-visibility {
+  right: 0.45rem;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.4rem;
+  color: var(--omnio-muted);
+  background: transparent;
+}
+
+.key-query-visibility:hover {
+  color: var(--omnio-foreground);
+  background: var(--omnio-surface-subtle);
+}
+
+.key-query-button {
+  min-width: 7rem;
+  min-height: 2.5rem;
+  gap: 0.45rem;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+}
+
+.key-query-privacy {
+  margin: 0.65rem 0 0;
+  color: var(--omnio-muted);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.key-date-filter {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--omnio-border);
+}
+
+.key-date-filter-row,
+.key-custom-date {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.key-date-label {
+  margin-right: 0.2rem;
+  color: var(--omnio-muted);
+  font-size: 0.72rem;
+}
+
+.key-date-option {
+  min-height: 1.85rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--omnio-border);
+  border-radius: 0.45rem;
+  color: var(--omnio-muted);
+  background: var(--omnio-surface);
+  font-size: 0.7rem;
+  font-weight: 560;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.key-date-option:hover {
+  color: var(--omnio-foreground);
+  border-color: var(--omnio-border-strong);
+}
+
+.key-date-option.is-active {
+  color: #fff;
+  border-color: var(--omnio-primary);
+  background: var(--omnio-primary);
+}
+
+.key-custom-date {
+  margin-left: 0.25rem;
+  color: var(--omnio-muted);
+}
+
+.key-date-input {
+  width: 8.4rem;
+  min-height: 1.85rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--omnio-border);
+  border-radius: 0.45rem;
+  color: var(--omnio-foreground);
+  background: var(--omnio-surface);
+  font-size: 0.68rem;
+}
+
+.key-date-apply {
+  min-height: 1.85rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.45rem;
+  font-size: 0.7rem;
+}
+
+.key-usage-main .rounded-2xl {
+  border-color: var(--omnio-border) !important;
+  border-radius: 0.75rem !important;
+  background: var(--omnio-surface) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.key-usage-main .rounded-2xl:hover {
+  box-shadow: 0 8px 24px rgb(15 23 42 / 5%) !important;
+}
+
+.key-usage-main .p-8 {
+  padding: 1.5rem !important;
+}
+
+.key-usage-main .px-8 {
+  padding-right: 1.5rem !important;
+  padding-left: 1.5rem !important;
+}
+
+.key-usage-main table {
+  color: var(--omnio-foreground);
+}
+
+.key-usage-footer {
+  border-top: 1px solid var(--omnio-border);
+}
+
+.key-usage-footer-inner {
+  display: flex;
+  width: min(100%, 72rem);
+  min-height: 5rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--omnio-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.key-usage-footer-inner p {
+  margin: 0;
+}
+
+.key-usage-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.key-usage-footer-link {
+  color: var(--omnio-muted);
+  text-decoration: none;
+  transition: color 140ms ease;
+}
+
+.key-usage-footer-link:hover {
+  color: var(--omnio-foreground);
+}
+
+@media (max-width: 640px) {
+  .key-usage-nav { padding: 0 1rem; }
+  .key-usage-brand > span:last-child { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .key-usage-main { padding: 6.5rem 1rem 3rem; }
+  .key-query-row { flex-direction: column; }
+  .key-query-button { width: 100%; }
+  .key-custom-date { width: 100%; margin: 0.4rem 0 0; }
+  .key-date-input { flex: 1; min-width: 7.5rem; }
+  .key-usage-main .p-8 { padding: 1.1rem !important; }
+  .key-usage-main .px-8 { padding-right: 1.1rem !important; padding-left: 1.1rem !important; }
+  .key-usage-footer-inner { flex-direction: column; gap: 0.45rem; }
+}
+
 /* Input focus ring */
 .input-ring {
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .input-ring:focus {
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
-  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px var(--omnio-ring);
+  border-color: var(--omnio-primary);
   outline: none;
 }
 
@@ -963,16 +1288,11 @@ onUnmounted(() => {
   100% { background-position: 200% 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background: linear-gradient(90deg, var(--omnio-border) 25%, var(--omnio-surface-subtle) 50%, var(--omnio-border) 75%);
   background-size: 200% 100%;
   animation: shimmer-kv 1.8s ease-in-out infinite;
   border-radius: 8px;
 }
-:global(.dark) .skeleton {
-  background: linear-gradient(90deg, #334155 25%, #1e293b 50%, #334155 75%);
-  background-size: 200% 100%;
-}
-
 /* Fade up animation */
 @keyframes fade-up-kv {
   from { opacity: 0; transform: translateY(16px); }

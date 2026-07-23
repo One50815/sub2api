@@ -3,7 +3,10 @@
     class="sidebar"
     :class="[
       sidebarCollapsed ? 'w-[72px]' : 'w-64',
-      { '-translate-x-full lg:translate-x-0': !mobileOpen }
+      {
+        'sidebar-collapsed': sidebarCollapsed,
+        '-translate-x-full lg:translate-x-0': !mobileOpen
+      }
     ]"
   >
     <!-- Logo/Brand -->
@@ -97,6 +100,7 @@
               <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
               <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
               <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ item.label }}</span>
+              <span v-if="(item.badge?.() ?? 0) > 0" class="ml-auto min-w-5 rounded-full bg-primary-600 px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white">{{ Math.min(item.badge?.() ?? 0, 99) }}</span>
             </router-link>
           </template>
         </div>
@@ -122,6 +126,7 @@
             <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
             <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
             <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ item.label }}</span>
+            <span v-if="(item.badge?.() ?? 0) > 0" class="ml-auto min-w-5 rounded-full bg-primary-600 px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white">{{ Math.min(item.badge?.() ?? 0, 99) }}</span>
           </router-link>
         </div>
       </template>
@@ -142,6 +147,7 @@
             <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
             <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
             <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ item.label }}</span>
+            <span v-if="(item.badge?.() ?? 0) > 0" class="ml-auto min-w-5 rounded-full bg-primary-600 px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white">{{ Math.min(item.badge?.() ?? 0, 99) }}</span>
           </router-link>
         </div>
       </template>
@@ -191,7 +197,7 @@
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore } from '@/stores'
+import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore, useTicketStore } from '@/stores'
 import VersionBadge from '@/components/common/VersionBadge.vue'
 import { sanitizeSvg } from '@/utils/sanitize'
 import { sanitizeUrl } from '@/utils/url'
@@ -217,6 +223,7 @@ interface NavItem {
    * 开关切换时菜单自动更新。
    */
   featureFlag?: () => boolean | undefined
+  badge?: () => number
 }
 
 // applyFeatureFlags 递归过滤掉 featureFlag() === false 的节点（含子节点）。
@@ -242,6 +249,7 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 const onboardingStore = useOnboardingStore()
 const adminSettingsStore = useAdminSettingsStore()
+const ticketStore = useTicketStore()
 const { canUseBatchImage, refreshBatchImageAccess } = useBatchImageAccess()
 
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
@@ -688,6 +696,7 @@ const flagRiskControl = makeSidebarFlag(FeatureFlags.riskControl)
 const flagOpsMonitoring = () => adminSettingsStore.opsMonitoringEnabled
 const flagAdminPayment = () => adminSettingsStore.paymentEnabled
 const flagBatchImageAccess = () => canUseBatchImage.value
+const flagTicketCenter = () => ticketStore.config.user_center_enabled
 
 // buildSelfNavItems 构造用户自己的导航项（用户端主菜单和管理员的"我的账户"子菜单共享这组声明）。
 // withDashboard=true 时包含仪表盘（用户端），false 时不含（管理员的个人区已经有独立仪表盘入口）。
@@ -705,11 +714,12 @@ function buildSelfNavItems(withDashboard: boolean): NavItem[] {
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
     { path: '/available-channels', label: t('nav.availableChannels'), icon: ChannelIcon, hideInSimpleMode: true, featureFlag: flagAvailableChannels },
     { path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon, featureFlag: flagChannelMonitor },
-    { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
+    { path: '/omnio-pro', label: t('nav.membership'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/purchase', label: t('nav.buySubscription'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true, featureFlag: flagPayment },
     { path: '/orders', label: t('nav.myOrders'), icon: OrderListIcon, hideInSimpleMode: true, featureFlag: flagPayment },
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/affiliate', label: t('nav.affiliate'), icon: UsersIcon, hideInSimpleMode: true, featureFlag: flagAffiliate },
+    { path: '/tickets', label: t('nav.myTickets'), icon: TicketIcon, featureFlag: flagTicketCenter, badge: () => ticketStore.userUnread },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },
     ...customMenuItemsForUser.value.map((item): NavItem => ({
       path: `/custom/${item.id}`,
@@ -767,9 +777,10 @@ const adminNavItems = computed((): NavItem[] => {
         { path: '/admin/channels/monitor', label: t('nav.channelMonitor'), icon: SignalIcon, featureFlag: flagChannelMonitor },
       ],
     },
-    { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
+    { path: '/admin/omnio-pro', label: t('nav.membership'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon },
     { path: '/admin/announcements', label: t('nav.announcements'), icon: BellIcon },
+    { path: '/admin/tickets', label: t('nav.ticketManagement'), icon: TicketIcon, badge: () => ticketStore.adminUnread },
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon },
     {
       path: '/admin/security-audit',
@@ -929,6 +940,7 @@ watch(
     if (v) {
       adminSettingsStore.fetch()
     }
+    ticketStore.startPolling(v)
   },
   { immediate: true }
 )
@@ -949,6 +961,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  ticketStore.stopPolling()
   if (sidebarNavRef.value) {
     appStore.sidebarScrollTop = sidebarNavRef.value.scrollTop
   }

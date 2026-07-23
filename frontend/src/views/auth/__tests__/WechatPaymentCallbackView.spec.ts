@@ -39,9 +39,14 @@ vi.mock('vue-i18n', () => ({
   }),
 }))
 
+vi.mock('@/components/common/LocaleSwitcher.vue', () => ({
+  default: { template: '<span />' },
+}))
+
 vi.mock('@/stores', () => ({
   useAppStore: () => ({
     showError: (...args: any[]) => showErrorMock(...args),
+    fetchPublicSettings: vi.fn(),
   }),
 }))
 

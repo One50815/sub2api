@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
 import { useAdminComplianceStore } from '@/stores/adminCompliance'
+import { useTicketStore } from '@/stores/tickets'
 import { useNavigationLoadingState } from '@/composables/useNavigationLoading'
 import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
@@ -280,24 +281,30 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/subscriptions',
-    name: 'Subscriptions',
-    component: () => import('@/views/user/SubscriptionsView.vue'),
+    name: 'SubscriptionsLegacy',
+    redirect: '/omnio-pro',
     meta: {
       requiresAuth: true,
       requiresAdmin: false,
-      title: 'My Subscriptions',
-      titleKey: 'userSubscriptions.title',
-      descriptionKey: 'userSubscriptions.description'
+      title: 'Omnio Pro',
+      titleKey: 'nav.membership'
     }
   },
   {
+    path: '/omnio-pro',
+    alias: '/membership',
+    name: 'Membership',
+    component: () => import('@/views/user/MembershipView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: false, title: 'Omnio Pro', titleKey: 'nav.membership', requiresPayment: true }
+  },
+  {
     path: '/purchase',
-    name: 'PurchaseSubscription',
+    name: 'PurchaseOmnioPro',
     component: () => import('@/views/user/PaymentView.vue'),
     meta: {
       requiresAuth: true,
       requiresAdmin: false,
-      title: 'Purchase Subscription',
+      title: 'Purchase Omnio Pro',
       titleKey: 'nav.buySubscription',
       descriptionKey: 'purchase.description',
       requiresPayment: true
@@ -384,6 +391,18 @@ const routes: RouteRecordRaw[] = [
       title: 'Custom Page',
       titleKey: 'customPage.title',
     }
+  },
+  {
+    path: '/tickets',
+    name: 'Tickets',
+    component: () => import('@/views/user/TicketsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: false, requiresTicketCenter: true, title: 'My Tickets', titleKey: 'nav.myTickets' }
+  },
+  {
+    path: '/tickets/:id',
+    name: 'TicketDetail',
+    component: () => import('@/views/user/TicketDetailView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: false, requiresTicketCenter: true, title: 'Ticket Details', titleKey: 'tickets.detail.title' }
   },
 
   // ==================== Admin Routes ====================
@@ -492,15 +511,21 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/admin/subscriptions',
-    name: 'AdminSubscriptions',
-    component: () => import('@/views/admin/SubscriptionsView.vue'),
+    name: 'AdminSubscriptionsLegacy',
+    redirect: '/admin/omnio-pro',
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'Subscription Management',
-      titleKey: 'admin.subscriptions.title',
-      descriptionKey: 'admin.subscriptions.description'
+      title: 'Omnio Pro',
+      titleKey: 'nav.membership'
     }
+  },
+  {
+    path: '/admin/omnio-pro',
+    alias: '/admin/membership',
+    name: 'AdminMembership',
+    component: () => import('@/views/admin/MembershipView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Omnio Pro', titleKey: 'nav.membership', requiresPayment: true }
   },
   {
     path: '/admin/accounts',
@@ -525,6 +550,18 @@ const routes: RouteRecordRaw[] = [
       titleKey: 'admin.announcements.title',
       descriptionKey: 'admin.announcements.description'
     }
+  },
+  {
+    path: '/admin/tickets',
+    name: 'AdminTickets',
+    component: () => import('@/views/admin/TicketsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Ticket Management', titleKey: 'nav.ticketManagement' }
+  },
+  {
+    path: '/admin/tickets/:id',
+    name: 'AdminTicketDetail',
+    component: () => import('@/views/admin/TicketDetailView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Handle Ticket', titleKey: 'tickets.admin.detailTitle' }
   },
   {
     path: '/admin/proxies',
@@ -834,6 +871,20 @@ router.beforeEach(async (to, _from, next) => {
     // User is authenticated but not admin, redirect to user dashboard
     next('/dashboard')
     return
+  }
+
+  if (to.meta.requiresTicketCenter) {
+    const ticketStore = useTicketStore()
+    try {
+      const config = await ticketStore.fetchConfig(false, true)
+      if (!config.user_center_enabled) {
+        next(authStore.isAdmin ? '/admin/tickets' : '/dashboard')
+        return
+      }
+    } catch {
+      // Backend remains authoritative. A temporary config read failure should
+      // not turn into a client-side permission decision.
+    }
   }
 
   if (requiresAdmin && authStore.isAdmin) {

@@ -221,6 +221,9 @@ func (s *PaymentService) executeFulfillment(ctx context.Context, oid int64) erro
 	if o.OrderType == payment.OrderTypeSubscription {
 		return s.ExecuteSubscriptionFulfillment(ctx, oid)
 	}
+	if o.OrderType == payment.OrderTypeMembership {
+		return s.ExecuteMembershipFulfillment(ctx, oid)
+	}
 	return s.ExecuteBalanceFulfillment(ctx, oid)
 }
 
@@ -505,10 +508,55 @@ func (s *PaymentService) doSub(ctx context.Context, o *dbent.PaymentOrder, lease
 	if err := s.ensurePaymentSubscriptionAssigned(ctx, o, gid, days); err != nil {
 		return err
 	}
+	if s.membershipService != nil && o.PlanID != nil {
+		sub, err := s.subscriptionSvc.GetActiveSubscription(ctx, o.UserID, gid)
+		if err != nil {
+			return fmt.Errorf("reload subscription for entitlement activation: %w", err)
+		}
+		if err := s.membershipService.ActivateSubscriptionGrant(ctx, o.ID, o.UserID, sub.ID, *o.PlanID, sub.StartsAt, sub.ExpiresAt, days); err != nil {
+			return fmt.Errorf("activate subscription entitlements: %w", err)
+		}
+		s.subscriptionSvc.InvalidateSubCacheSync(o.UserID, gid)
+	}
 	if err := s.applyAffiliateRebateForOrder(ctx, o); err != nil {
 		return err
 	}
 	return s.markCompleted(ctx, o, lease, "SUBSCRIPTION_SUCCESS")
+}
+
+func (s *PaymentService) ExecuteMembershipFulfillment(ctx context.Context, oid int64) error {
+	o, err := s.entClient.PaymentOrder.Get(ctx, oid)
+	if err != nil {
+		return infraerrors.NotFound("NOT_FOUND", "order not found")
+	}
+	if o.Status == OrderStatusCompleted {
+		return nil
+	}
+	if psIsRefundStatus(o.Status) {
+		return infraerrors.BadRequest("INVALID_STATUS", "refund-related order cannot fulfill")
+	}
+	if o.Status != OrderStatusPaid && o.Status != OrderStatusFailed && o.Status != OrderStatusRecharging {
+		return infraerrors.BadRequest("INVALID_STATUS", "order cannot fulfill in status "+o.Status)
+	}
+	if o.PlanID == nil || s.membershipService == nil {
+		return infraerrors.BadRequest("INVALID_STATUS", "missing membership offer")
+	}
+	lease, err := s.acquirePaymentFulfillmentLease(ctx, o)
+	if err != nil {
+		return err
+	}
+	if lease == nil {
+		return nil
+	}
+	if err := s.membershipService.GrantOfferFromOrder(ctx, o.ID, o.UserID, *o.PlanID); err != nil {
+		s.markFailed(ctx, oid, lease, err)
+		return err
+	}
+	if err := s.applyAffiliateRebateForOrder(ctx, o); err != nil {
+		s.markFailed(ctx, oid, lease, err)
+		return err
+	}
+	return s.markCompleted(ctx, o, lease, "MEMBERSHIP_SUCCESS")
 }
 
 func (s *PaymentService) ensurePaymentSubscriptionAssigned(ctx context.Context, o *dbent.PaymentOrder, groupID int64, days int) error {
@@ -699,7 +747,7 @@ func affiliateRebateBaseAmount(o *dbent.PaymentOrder) float64 {
 		return 0
 	}
 	switch o.OrderType {
-	case payment.OrderTypeBalance, payment.OrderTypeSubscription:
+	case payment.OrderTypeBalance, payment.OrderTypeSubscription, payment.OrderTypeMembership:
 		return o.Amount
 	default:
 		return 0

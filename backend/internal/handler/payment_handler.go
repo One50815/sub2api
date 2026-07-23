@@ -44,11 +44,10 @@ func (h *PaymentHandler) GetPaymentConfig(c *gin.Context) {
 // GetPlans returns subscription plans available for sale.
 // GET /api/v1/payment/plans
 func (h *PaymentHandler) GetPlans(c *gin.Context) {
-	plans, err := h.configService.ListPlansForSale(c.Request.Context())
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-	}
+	// Subscription plans remain readable by internal compatibility paths, but
+	// are no longer exposed as a user purchase catalog. Omnio Pro offers are
+	// returned by /payment/checkout-info and /membership/offers.
+	plans := make([]*dbent.SubscriptionPlan, 0)
 	// Enrich plans with group platform for frontend color coding
 	type planWithPlatform struct {
 		ID                 int64    `json:"id"`
@@ -111,7 +110,15 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 	}
 
 	// Fetch plans with group info
-	plans, _ := h.configService.ListPlansForSale(ctx)
+	// Subscription plans are intentionally omitted from the public checkout.
+	// Existing paid orders are still fulfilled by the compatibility service.
+	plans := make([]*dbent.SubscriptionPlan, 0)
+	membershipOffers, _ := h.paymentService.ListMembershipOffers(ctx)
+	planMembershipBenefits, _ := h.paymentService.ListPlanMembershipBenefits(ctx)
+	planBenefitMap := make(map[int64]service.PlanMembershipBenefit, len(planMembershipBenefits))
+	for _, benefit := range planMembershipBenefits {
+		planBenefitMap[benefit.PlanID] = benefit
+	}
 	groupInfo := h.configService.GetGroupInfoMap(ctx, plans)
 	planList := make([]checkoutPlan, 0, len(plans))
 	for _, p := range plans {
@@ -129,6 +136,13 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 			Currency:     p.Currency,
 			ValidityDays: p.ValidityDays, ValidityUnit: p.ValidityUnit, Features: parseFeatures(p.Features),
 			ProductName: p.ProductName,
+			MembershipBenefit: func() *service.PlanMembershipBenefit {
+				v, ok := planBenefitMap[int64(p.ID)]
+				if !ok {
+					return nil
+				}
+				return &v
+			}(),
 		})
 	}
 
@@ -137,6 +151,7 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 		GlobalMin:                 limitsResp.GlobalMin,
 		GlobalMax:                 limitsResp.GlobalMax,
 		Plans:                     planList,
+		MembershipOffers:          membershipOffers,
 		BalanceDisabled:           cfg.BalanceDisabled,
 		BalanceRechargeMultiplier: cfg.BalanceRechargeMultiplier,
 		SubscriptionUSDToCNYRate:  cfg.SubscriptionUSDToCNYRate,
@@ -153,6 +168,7 @@ type checkoutInfoResponse struct {
 	GlobalMin                 float64                         `json:"global_min"`
 	GlobalMax                 float64                         `json:"global_max"`
 	Plans                     []checkoutPlan                  `json:"plans"`
+	MembershipOffers          []service.MembershipOffer       `json:"membership_offers"`
 	BalanceDisabled           bool                            `json:"balance_disabled"`
 	BalanceRechargeMultiplier float64                         `json:"balance_recharge_multiplier"`
 	SubscriptionUSDToCNYRate  float64                         `json:"subscription_usd_to_cny_rate"`
@@ -164,28 +180,29 @@ type checkoutInfoResponse struct {
 }
 
 type checkoutPlan struct {
-	ID                 int64    `json:"id"`
-	GroupID            int64    `json:"group_id"`
-	GroupPlatform      string   `json:"group_platform"`
-	GroupName          string   `json:"group_name"`
-	RateMultiplier     float64  `json:"rate_multiplier"`
-	PeakRateEnabled    bool     `json:"peak_rate_enabled"`
-	PeakStart          string   `json:"peak_start"`
-	PeakEnd            string   `json:"peak_end"`
-	PeakRateMultiplier float64  `json:"peak_rate_multiplier"`
-	DailyLimitUSD      *float64 `json:"daily_limit_usd"`
-	WeeklyLimitUSD     *float64 `json:"weekly_limit_usd"`
-	MonthlyLimitUSD    *float64 `json:"monthly_limit_usd"`
-	ModelScopes        []string `json:"supported_model_scopes"`
-	Name               string   `json:"name"`
-	Description        string   `json:"description"`
-	Price              float64  `json:"price"`
-	OriginalPrice      *float64 `json:"original_price,omitempty"`
-	Currency           string   `json:"currency,omitempty"`
-	ValidityDays       int      `json:"validity_days"`
-	ValidityUnit       string   `json:"validity_unit"`
-	Features           []string `json:"features"`
-	ProductName        string   `json:"product_name"`
+	ID                 int64                          `json:"id"`
+	GroupID            int64                          `json:"group_id"`
+	GroupPlatform      string                         `json:"group_platform"`
+	GroupName          string                         `json:"group_name"`
+	RateMultiplier     float64                        `json:"rate_multiplier"`
+	PeakRateEnabled    bool                           `json:"peak_rate_enabled"`
+	PeakStart          string                         `json:"peak_start"`
+	PeakEnd            string                         `json:"peak_end"`
+	PeakRateMultiplier float64                        `json:"peak_rate_multiplier"`
+	DailyLimitUSD      *float64                       `json:"daily_limit_usd"`
+	WeeklyLimitUSD     *float64                       `json:"weekly_limit_usd"`
+	MonthlyLimitUSD    *float64                       `json:"monthly_limit_usd"`
+	ModelScopes        []string                       `json:"supported_model_scopes"`
+	Name               string                         `json:"name"`
+	Description        string                         `json:"description"`
+	Price              float64                        `json:"price"`
+	OriginalPrice      *float64                       `json:"original_price,omitempty"`
+	Currency           string                         `json:"currency,omitempty"`
+	ValidityDays       int                            `json:"validity_days"`
+	ValidityUnit       string                         `json:"validity_unit"`
+	Features           []string                       `json:"features"`
+	ProductName        string                         `json:"product_name"`
+	MembershipBenefit  *service.PlanMembershipBenefit `json:"membership_benefit,omitempty"`
 }
 
 // parseFeatures splits a newline-separated features string into a string slice.

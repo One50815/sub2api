@@ -45,6 +45,7 @@ export interface PaymentRecoverySnapshot {
   paymentEnv: string
   payAmount: number
   orderType: OrderType | ''
+  planId?: number
   paymentMode: string
   resumeToken: string
   createdAt: number
@@ -53,6 +54,7 @@ export interface PaymentRecoverySnapshot {
 export interface PaymentLaunchContext {
   visibleMethod: string
   orderType: OrderType
+  planId?: number
   isMobile: boolean
   isWechatBrowser?: boolean
   /** When true, Alipay payments always use QR code regardless of device type */
@@ -160,6 +162,7 @@ export function decidePaymentLaunch(
     paymentEnv: result.payment_env || '',
     payAmount: result.pay_amount,
     orderType: context.orderType,
+    planId: context.planId,
     paymentMode: (result.payment_mode || '').trim(),
     resumeToken: result.resume_token || '',
   }, context.now)
@@ -307,7 +310,10 @@ export function readPaymentRecoverySnapshot(
       countryCode: parsed.countryCode || '',
       paymentEnv: parsed.paymentEnv || '',
       payAmount: parsed.payAmount,
-      orderType: parsed.orderType === 'subscription' ? 'subscription' : 'balance',
+      orderType: parsed.orderType === 'subscription'
+        ? 'subscription'
+        : parsed.orderType === 'membership' ? 'membership' : 'balance',
+      planId: typeof parsed.planId === 'number' && parsed.planId > 0 ? parsed.planId : undefined,
       paymentMode: parsed.paymentMode,
       resumeToken: parsed.resumeToken,
       createdAt: parsed.createdAt,

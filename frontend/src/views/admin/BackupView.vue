@@ -194,88 +194,85 @@
     </div>
 
     <!-- Cloudflare R2 Setup Guide Modal -->
-    <teleport to="body">
-      <transition name="modal">
-        <div v-if="showR2Guide" class="fixed inset-0 z-50 flex items-center justify-center p-4" @mousedown.self="showR2Guide = false">
-          <div class="fixed inset-0 bg-black/50" @click="showR2Guide = false"></div>
-          <div class="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl dark:bg-dark-800">
-            <button type="button" class="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" @click="showR2Guide = false">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+    <BaseDialog
+      :show="showR2Guide"
+      :title="t('admin.backup.r2Guide.title')"
+      width="wide"
+      :close-on-click-outside="true"
+      @close="showR2Guide = false"
+    >
+      <div class="r2-guide">
+        <p class="guide-intro">{{ t('admin.backup.r2Guide.intro') }}</p>
 
-            <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">{{ t('admin.backup.r2Guide.title') }}</h2>
-            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">{{ t('admin.backup.r2Guide.intro') }}</p>
+        <section class="guide-step">
+          <h3 class="guide-step-title">
+            <span class="guide-step-number">1</span>
+            {{ t('admin.backup.r2Guide.step1.title') }}
+          </h3>
+          <ol class="guide-list">
+            <li>{{ t('admin.backup.r2Guide.step1.line1') }}</li>
+            <li>{{ t('admin.backup.r2Guide.step1.line2') }}</li>
+            <li>{{ t('admin.backup.r2Guide.step1.line3') }}</li>
+          </ol>
+        </section>
 
-            <!-- Step 1 -->
-            <div class="mb-5">
-              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">1</span>
-                {{ t('admin.backup.r2Guide.step1.title') }}
-              </h3>
-              <ol class="ml-8 list-decimal space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                <li>{{ t('admin.backup.r2Guide.step1.line1') }}</li>
-                <li>{{ t('admin.backup.r2Guide.step1.line2') }}</li>
-                <li>{{ t('admin.backup.r2Guide.step1.line3') }}</li>
-              </ol>
-            </div>
-
-            <!-- Step 2 -->
-            <div class="mb-5">
-              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">2</span>
-                {{ t('admin.backup.r2Guide.step2.title') }}
-              </h3>
-              <ol class="ml-8 list-decimal space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                <li>{{ t('admin.backup.r2Guide.step2.line1') }}</li>
-                <li>{{ t('admin.backup.r2Guide.step2.line2') }}</li>
-                <li>{{ t('admin.backup.r2Guide.step2.line3') }}</li>
-                <li>{{ t('admin.backup.r2Guide.step2.line4') }}</li>
-              </ol>
-              <div class="mt-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-                {{ t('admin.backup.r2Guide.step2.warning') }}
-              </div>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="mb-5">
-              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">3</span>
-                {{ t('admin.backup.r2Guide.step3.title') }}
-              </h3>
-              <p class="ml-8 text-sm text-gray-600 dark:text-gray-300">{{ t('admin.backup.r2Guide.step3.desc') }}</p>
-              <code class="ml-8 mt-1 block rounded bg-gray-100 px-3 py-2 text-xs text-gray-800 dark:bg-dark-700 dark:text-gray-200">https://&lt;{{ t('admin.backup.r2Guide.step3.accountId') }}&gt;.r2.cloudflarestorage.com</code>
-            </div>
-
-            <!-- Step 4: Fill form -->
-            <div class="mb-5">
-              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">4</span>
-                {{ t('admin.backup.r2Guide.step4.title') }}
-              </h3>
-              <div class="ml-8 overflow-hidden rounded-lg border border-gray-200 dark:border-dark-600">
-                <table class="w-full text-sm">
-                  <tbody>
-                    <tr v-for="(row, i) in r2ConfigRows" :key="i" class="border-b border-gray-100 dark:border-dark-700 last:border-0">
-                      <td class="whitespace-nowrap bg-gray-50 px-3 py-2 font-medium text-gray-700 dark:bg-dark-700 dark:text-gray-300">{{ row.field }}</td>
-                      <td class="px-3 py-2 text-gray-600 dark:text-gray-400"><code class="text-xs">{{ row.value }}</code></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Free tier note -->
-            <div class="rounded-lg bg-green-50 p-3 text-xs text-green-700 dark:bg-green-900/20 dark:text-green-300">
-              {{ t('admin.backup.r2Guide.freeTier') }}
-            </div>
-
-            <div class="mt-4 text-right">
-              <button type="button" class="btn btn-primary btn-sm" @click="showR2Guide = false">{{ t('common.close') }}</button>
-            </div>
+        <section class="guide-step">
+          <h3 class="guide-step-title">
+            <span class="guide-step-number">2</span>
+            {{ t('admin.backup.r2Guide.step2.title') }}
+          </h3>
+          <ol class="guide-list">
+            <li>{{ t('admin.backup.r2Guide.step2.line1') }}</li>
+            <li>{{ t('admin.backup.r2Guide.step2.line2') }}</li>
+            <li>{{ t('admin.backup.r2Guide.step2.line3') }}</li>
+            <li>{{ t('admin.backup.r2Guide.step2.line4') }}</li>
+          </ol>
+          <div class="guide-note guide-note-warning">
+            <Icon name="exclamationTriangle" size="sm" aria-hidden="true" />
+            <span>{{ t('admin.backup.r2Guide.step2.warning') }}</span>
           </div>
+        </section>
+
+        <section class="guide-step">
+          <h3 class="guide-step-title">
+            <span class="guide-step-number">3</span>
+            {{ t('admin.backup.r2Guide.step3.title') }}
+          </h3>
+          <p class="guide-copy">{{ t('admin.backup.r2Guide.step3.desc') }}</p>
+          <code class="guide-code">https://&lt;{{ t('admin.backup.r2Guide.step3.accountId') }}&gt;.r2.cloudflarestorage.com</code>
+        </section>
+
+        <section class="guide-step">
+          <h3 class="guide-step-title">
+            <span class="guide-step-number">4</span>
+            {{ t('admin.backup.r2Guide.step4.title') }}
+          </h3>
+          <div class="guide-table-wrap">
+            <table class="guide-table">
+              <tbody>
+                <tr v-for="(row, i) in r2ConfigRows" :key="i">
+                  <th scope="row">{{ row.field }}</th>
+                  <td><code>{{ row.value }}</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="guide-note guide-note-success">
+          <Icon name="checkCircle" size="sm" aria-hidden="true" />
+          <span>{{ t('admin.backup.r2Guide.freeTier') }}</span>
         </div>
-      </transition>
-    </teleport>
+      </div>
+
+      <template #footer>
+        <div class="guide-actions">
+          <button type="button" class="btn btn-primary" @click="showR2Guide = false">
+            {{ t('common.close') }}
+          </button>
+        </div>
+      </template>
+    </BaseDialog>
     <TotpStepUpDialog :controller="backupStepUp" />
 </template>
 
@@ -287,6 +284,8 @@ import { useAppStore } from '@/stores'
 import type { BackupS3Config, BackupScheduleConfig, BackupRecord } from '@/api/admin/backup'
 import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason } from '@/composables/useStepUp'
 import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+import Icon from '@/components/icons/Icon.vue'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -665,12 +664,195 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
+.r2-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
+
+.guide-intro {
+  margin-bottom: 0.25rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.guide-step {
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.625rem;
+  padding: 0.875rem;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 1.5%, var(--omnio-surface, #fff));
+}
+
+.guide-step-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.guide-step-number {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--omnio-primary, #3b82f6) 22%, var(--omnio-border, #e5e7eb));
+  border-radius: 0.5rem;
+  color: var(--omnio-primary, #3b82f6);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 6%, var(--omnio-surface, #fff));
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.guide-list,
+.guide-copy,
+.guide-code,
+.guide-note,
+.guide-table-wrap {
+  margin-left: 2rem;
+}
+
+.guide-list {
+  margin-top: 0.625rem;
+  list-style: decimal;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.guide-copy {
+  margin-top: 0.625rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.guide-code {
+  display: block;
+  margin-top: 0.5rem;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 3%, var(--omnio-surface, #fff));
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.guide-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--omnio-muted, #6b7280);
+  background: var(--omnio-surface, #fff);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.guide-note :deep(svg) {
+  flex: 0 0 auto;
+}
+
+.guide-note-warning {
+  border-color: color-mix(in srgb, #d97706 18%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, #f59e0b 4%, var(--omnio-surface, #fff));
+}
+
+.guide-note-warning :deep(svg) {
+  color: #d97706;
+}
+
+.guide-note-success {
+  margin-left: 0;
+  border-color: color-mix(in srgb, #059669 18%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, #10b981 4%, var(--omnio-surface, #fff));
+}
+
+.guide-note-success :deep(svg) {
+  color: #059669;
+}
+
+.guide-table-wrap {
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+}
+
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.guide-table tr + tr {
+  border-top: 1px solid var(--omnio-border, #e5e7eb);
+}
+
+.guide-table th,
+.guide-table td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.guide-table th {
+  width: 8.5rem;
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 3%, var(--omnio-surface, #fff));
+  font-weight: 600;
+}
+
+.guide-table td {
+  color: var(--omnio-muted, #6b7280);
+}
+
+.guide-table code {
+  overflow-wrap: anywhere;
+  font-size: 0.6875rem;
+}
+
+.guide-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  .guide-list,
+  .guide-copy,
+  .guide-code,
+  .guide-note,
+  .guide-table-wrap {
+    margin-left: 0;
+  }
+
+  .guide-table,
+  .guide-table tbody,
+  .guide-table tr,
+  .guide-table th,
+  .guide-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .guide-table td {
+    padding-top: 0.35rem;
+  }
+
+  .guide-actions .btn {
+    width: 100%;
+  }
 }
 </style>

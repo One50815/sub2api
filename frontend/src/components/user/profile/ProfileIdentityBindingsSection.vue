@@ -31,15 +31,13 @@
           <div class="flex min-w-0 flex-1 items-start gap-4">
             <div
               :class="providerIconClass(item.provider)"
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
             >
               <Icon
-                v-if="item.provider === 'email'"
-                name="mail"
-                size="sm"
+                :name="providerIconName(item.provider)"
+                size="md"
                 class="text-current"
               />
-              <span v-else>{{ providerInitial(item.provider) }}</span>
             </div>
 
             <div class="min-w-0 flex-1 space-y-3">
@@ -284,8 +282,8 @@ const compact = computed(() => props.compact)
 const rowClass = computed(() =>
   props.embedded
     ? compact.value
-      ? 'rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-dark-700 dark:bg-dark-900/40'
-      : 'rounded-2xl border border-gray-100 bg-gray-50/70 p-4 dark:border-dark-700 dark:bg-dark-900/30'
+      ? 'rounded-lg border border-gray-200 bg-gray-50/70 p-4 dark:border-dark-700 dark:bg-dark-900/30'
+      : 'rounded-lg border border-gray-200 bg-gray-50/70 p-4 dark:border-dark-700 dark:bg-dark-900/30'
     : 'px-6 py-5'
 )
 const emailBound = computed(() => getBindingStatus('email'))
@@ -472,20 +470,14 @@ const providerItems = computed(() => [
   },
 ])
 
-function providerInitial(provider: UserAuthProvider): string {
-  if (provider === 'linuxdo') {
-    return 'L'
-  }
-  if (provider === 'dingtalk') {
-    return 'D'
-  }
-  if (provider === 'wechat') {
-    return 'W'
-  }
-  if (provider === 'oidc') {
-    return 'O'
-  }
-  return 'E'
+function providerIconName(
+  provider: UserAuthProvider
+): 'mail' | 'chatBubble' | 'users' | 'shield' | 'chat' {
+  if (provider === 'linuxdo') return 'chatBubble'
+  if (provider === 'dingtalk') return 'users'
+  if (provider === 'oidc') return 'shield'
+  if (provider === 'wechat') return 'chat'
+  return 'mail'
 }
 
 function providerIconClass(provider: UserAuthProvider): string {

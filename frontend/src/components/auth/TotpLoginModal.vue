@@ -1,83 +1,82 @@
 <template>
-  <div class="fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-full items-center justify-center p-4">
-      <div class="fixed inset-0 bg-black/50 transition-opacity"></div>
+  <BaseDialog
+    :show="true"
+    :title="t('profile.totp.loginTitle')"
+    width="narrow"
+    :close-on-click-outside="true"
+    :close-on-escape="!verifying"
+    :show-close-button="!verifying"
+    @close="handleCancel"
+  >
+    <div class="totp-content">
+      <div class="totp-intro">
+        <span class="totp-icon" aria-hidden="true">
+          <Icon name="shield" size="lg" />
+        </span>
+        <p class="totp-hint">{{ t('profile.totp.loginHint') }}</p>
+        <p v-if="userEmailMasked" class="totp-email">{{ userEmailMasked }}</p>
+      </div>
 
-      <div class="relative w-full max-w-md transform rounded-xl bg-white p-6 shadow-xl transition-all dark:bg-dark-800">
-        <!-- Header -->
-        <div class="mb-6 text-center">
-          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30">
-            <svg class="h-6 w-6 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-            </svg>
-          </div>
-          <h3 class="mt-4 text-xl font-semibold text-gray-900 dark:text-white">
-            {{ t('profile.totp.loginTitle') }}
-          </h3>
-          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            {{ t('profile.totp.loginHint') }}
-          </p>
-          <p v-if="userEmailMasked" class="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            {{ userEmailMasked }}
-          </p>
-        </div>
+      <!-- Hidden input for password manager autofill (autocomplete="one-time-code") -->
+      <input
+        ref="hiddenOtpInputRef"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="6"
+        class="pointer-events-none absolute left-0 top-0 h-px w-px opacity-0"
+        aria-hidden="true"
+        tabindex="-1"
+        @input="handleHiddenOtpInput"
+      />
 
-        <!-- Code Input -->
-        <div class="mb-6">
-          <!-- Hidden input for password manager autofill (autocomplete="one-time-code") -->
-          <input
-            ref="hiddenOtpInputRef"
-            type="text"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="6"
-            class="pointer-events-none absolute left-0 top-0 h-px w-px opacity-0"
-            aria-hidden="true"
-            tabindex="-1"
-            @input="handleHiddenOtpInput"
-          />
-          <div class="flex justify-center gap-2">
-            <input
-              v-for="(_, index) in 6"
-              :key="index"
-              :ref="(el) => setInputRef(el, index)"
-              type="text"
-              maxlength="1"
-              inputmode="numeric"
-              pattern="[0-9]"
-              autocomplete="off"
-              class="h-12 w-10 rounded-lg border border-gray-300 text-center text-lg font-semibold focus:border-primary-500 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-700"
-              :disabled="verifying"
-              @input="handleCodeInput($event, index)"
-              @keydown="handleKeydown($event, index)"
-              @paste="handlePaste"
-            />
-          </div>
-          <!-- Loading indicator -->
-          <div v-if="verifying" class="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
-            {{ t('common.verifying') }}
-          </div>
-        </div>
+      <div class="totp-code" role="group" :aria-label="t('profile.totp.enterCode')">
+        <input
+          v-for="(_, index) in 6"
+          :key="index"
+          :ref="(el) => setInputRef(el, index)"
+          type="text"
+          maxlength="1"
+          inputmode="numeric"
+          pattern="[0-9]"
+          autocomplete="off"
+          class="totp-cell"
+          :class="{ 'totp-cell-group-end': index === 1 || index === 3 }"
+          :aria-label="`${t('profile.totp.enterCode')} ${index + 1}`"
+          :disabled="verifying"
+          @input="handleCodeInput($event, index)"
+          @keydown="handleKeydown($event, index)"
+          @paste="handlePaste"
+        />
+      </div>
 
-        <!-- Cancel button only -->
+      <div v-if="verifying" class="totp-status" role="status">
+        <Icon name="refresh" size="sm" class="animate-spin" />
+        <span>{{ t('common.verifying') }}</span>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="totp-actions">
         <button
           type="button"
-          class="btn btn-secondary w-full"
+          class="btn btn-secondary"
           :disabled="verifying"
-          @click="$emit('cancel')"
+          @click="handleCancel"
         >
           {{ t('common.cancel') }}
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+import Icon from '@/components/icons/Icon.vue'
 
 defineProps<{
   tempToken: string
@@ -96,6 +95,12 @@ const verifying = ref(false)
 const code = ref<string[]>(['', '', '', '', '', ''])
 const inputRefs = ref<(HTMLInputElement | null)[]>([])
 const hiddenOtpInputRef = ref<HTMLInputElement | null>(null)
+
+const handleCancel = () => {
+  if (!verifying.value) {
+    emit('cancel')
+  }
+}
 
 // Watch for code changes and auto-submit when 6 digits are entered
 watch(
@@ -210,3 +215,118 @@ onMounted(() => {
   })
 })
 </script>
+
+<style scoped>
+.totp-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.totp-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.totp-icon {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--omnio-primary, #3b82f6) 18%, var(--omnio-border, #e5e7eb));
+  border-radius: 0.625rem;
+  color: var(--omnio-primary, #3b82f6);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 7%, var(--omnio-surface, #fff));
+}
+
+.totp-hint,
+.totp-email,
+.totp-status {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.totp-hint {
+  color: var(--omnio-muted, #6b7280);
+}
+
+.totp-email {
+  color: var(--omnio-foreground, #111827);
+  font-weight: 550;
+}
+
+.totp-code {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.totp-cell {
+  width: 2.5rem;
+  height: 3rem;
+  border: 1px solid var(--omnio-border, #d1d5db);
+  border-radius: 0.625rem;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.totp-cell:focus {
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 20%, transparent);
+}
+
+.totp-cell:disabled {
+  cursor: wait;
+  opacity: 0.58;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 4%, var(--omnio-surface, #fff));
+}
+
+.totp-cell-group-end {
+  margin-right: 0.25rem;
+}
+
+.totp-status {
+  display: flex;
+  min-height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--omnio-muted, #6b7280);
+}
+
+.totp-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+@media (max-width: 380px) {
+  .totp-code {
+    gap: 0.35rem;
+  }
+
+  .totp-cell {
+    width: 2.2rem;
+  }
+
+  .totp-cell-group-end {
+    margin-right: 0.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .totp-cell {
+    transition-duration: 1ms;
+  }
+}
+</style>

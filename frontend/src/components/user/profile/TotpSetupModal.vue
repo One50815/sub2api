@@ -1,174 +1,177 @@
 <template>
-  <div class="fixed inset-0 z-50 overflow-y-auto" @click.self="$emit('close')">
-    <div class="flex min-h-full items-center justify-center p-4">
-      <div class="fixed inset-0 bg-black/50 transition-opacity" @click="$emit('close')"></div>
+  <BaseDialog
+    :show="true"
+    :title="t('profile.totp.setupTitle')"
+    width="normal"
+    :close-on-click-outside="true"
+    @close="emit('close')"
+  >
+    <div class="setup-content">
+      <div class="step-heading">
+        <div class="step-track" aria-hidden="true">
+          <span v-for="index in 3" :key="index" :class="['step-dot', { active: step >= index - 1 }]">
+            {{ index }}
+          </span>
+        </div>
+        <p>{{ stepDescription }}</p>
+      </div>
 
-      <div class="relative w-full max-w-md transform rounded-xl bg-white p-6 shadow-xl transition-all dark:bg-dark-800">
-        <!-- Header -->
-        <div class="mb-6 text-center">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-            {{ t('profile.totp.setupTitle') }}
-          </h3>
-          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            {{ stepDescription }}
-          </p>
+      <!-- Step 0: Identity Verification -->
+      <div v-if="step === 0" class="setup-panel">
+        <div v-if="methodLoading" class="loading-state" role="status">
+          <Icon name="refresh" size="md" class="animate-spin" />
+          <span>{{ t('common.loading') }}</span>
         </div>
 
-        <!-- Step 0: Identity Verification -->
-        <div v-if="step === 0" class="space-y-6">
-          <!-- Loading verification method -->
-          <div v-if="methodLoading" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-          </div>
-
-          <template v-else>
-            <!-- Email verification -->
-            <div v-if="verificationMethod === 'email'" class="space-y-4">
-              <div>
-                <label class="input-label">{{ t('profile.totp.emailCode') }}</label>
-                <div class="flex gap-2">
-                  <input
-                    v-model="verifyForm.emailCode"
-                    type="text"
-                    maxlength="6"
-                    inputmode="numeric"
-                    class="input flex-1"
-                    :placeholder="t('profile.totp.enterEmailCode')"
-                  />
-                  <button
-                    type="button"
-                    class="btn btn-secondary whitespace-nowrap"
-                    :disabled="sendingCode || codeCooldown > 0"
-                    @click="handleSendCode"
-                  >
-                    {{ codeCooldown > 0 ? `${codeCooldown}s` : (sendingCode ? t('common.sending') : t('profile.totp.sendCode')) }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Password verification -->
-            <div v-else class="space-y-4">
-              <div>
-                <label class="input-label">{{ t('profile.currentPassword') }}</label>
-                <input
-                  v-model="verifyForm.password"
-                  type="password"
-                  autocomplete="current-password"
-                  class="input"
-                  :placeholder="t('profile.totp.enterPassword')"
-                />
-              </div>
-            </div>
-
-            <div class="flex justify-end gap-3 pt-4">
-              <button type="button" class="btn btn-secondary" @click="$emit('close')">
-                {{ t('common.cancel') }}
-              </button>
+        <template v-else>
+          <div v-if="verificationMethod === 'email'" class="field-group">
+            <label for="totp-setup-email-code" class="input-label">
+              {{ t('profile.totp.emailCode') }}
+            </label>
+            <div class="verification-row">
+              <input
+                id="totp-setup-email-code"
+                v-model="verifyForm.emailCode"
+                type="text"
+                maxlength="6"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                class="input min-w-0 flex-1"
+                :placeholder="t('profile.totp.enterEmailCode')"
+              />
               <button
                 type="button"
-                class="btn btn-primary"
-                :disabled="!canProceedFromVerify || setupLoading"
-                @click="handleVerifyAndSetup"
+                class="btn btn-secondary whitespace-nowrap"
+                :disabled="sendingCode || codeCooldown > 0"
+                @click="handleSendCode"
               >
-                {{ setupLoading ? t('common.loading') : t('common.next') }}
+                {{ codeCooldown > 0 ? `${codeCooldown}s` : (sendingCode ? t('common.sending') : t('profile.totp.sendCode')) }}
               </button>
             </div>
-          </template>
-        </div>
+          </div>
 
-        <!-- Step 1: Show QR Code -->
-        <div v-if="step === 1" class="space-y-6">
-          <!-- QR Code and Secret -->
-          <template v-if="setupData">
-            <div class="flex justify-center">
-              <div class="rounded-lg border border-gray-200 p-4 bg-white dark:border-dark-600 dark:bg-white">
-                <img :src="qrCodeDataUrl" alt="QR Code" class="h-48 w-48" />
-              </div>
+          <div v-else class="field-group">
+            <label for="totp-setup-password" class="input-label">
+              {{ t('profile.currentPassword') }}
+            </label>
+            <input
+              id="totp-setup-password"
+              v-model="verifyForm.password"
+              type="password"
+              autocomplete="current-password"
+              class="input"
+              :placeholder="t('profile.totp.enterPassword')"
+            />
+          </div>
+        </template>
+      </div>
+
+      <!-- Step 1: Show QR Code -->
+      <div v-else-if="step === 1" class="setup-panel qr-panel">
+        <template v-if="setupData">
+          <div class="qr-card">
+            <img :src="qrCodeDataUrl" alt="QR Code" class="qr-image" />
+          </div>
+
+          <div class="secret-card">
+            <div class="min-w-0 flex-1">
+              <p>{{ t('profile.totp.manualEntry') }}</p>
+              <code>{{ setupData.secret }}</code>
             </div>
-
-            <div class="text-center">
-              <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                {{ t('profile.totp.manualEntry') }}
-              </p>
-              <div class="flex items-center justify-center gap-2">
-                <code class="rounded bg-gray-100 px-3 py-2 font-mono text-sm dark:bg-dark-700">
-                  {{ setupData.secret }}
-                </code>
-                <button
-                  type="button"
-                  class="rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-dark-700"
-                  @click="copySecret"
-                >
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </template>
-
-          <div class="flex justify-end gap-3 pt-4">
-            <button type="button" class="btn btn-secondary" @click="$emit('close')">
-              {{ t('common.cancel') }}
-            </button>
             <button
               type="button"
-              class="btn btn-primary"
-              :disabled="!setupData"
-              @click="step = 2"
+              class="copy-button"
+              :aria-label="t('profile.totp.manualEntry')"
+              @click="copySecret"
             >
-              {{ t('common.next') }}
+              <Icon name="copy" size="sm" />
             </button>
           </div>
-        </div>
+        </template>
+      </div>
 
-        <!-- Step 2: Verify Code -->
-        <div v-if="step === 2" class="space-y-6">
-          <form @submit.prevent="handleVerify">
-            <div class="mb-6">
-              <label class="input-label text-center block mb-3">
-                {{ t('profile.totp.enterCode') }}
-              </label>
-              <div class="flex justify-center gap-2">
-                <input
-                  v-for="(_, index) in 6"
-                  :key="index"
-                  :ref="(el) => setInputRef(el, index)"
-                  type="text"
-                  maxlength="1"
-                  inputmode="numeric"
-                  pattern="[0-9]"
-                  class="h-12 w-10 rounded-lg border border-gray-300 text-center text-lg font-semibold focus:border-primary-500 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-700"
-                  @input="handleCodeInput($event, index)"
-                  @keydown="handleKeydown($event, index)"
-                  @paste="handlePaste"
-                />
-              </div>
-            </div>
-
-            <div class="flex justify-end gap-3">
-              <button type="button" class="btn btn-secondary" @click="step = 1">
-                {{ t('common.back') }}
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary"
-                :disabled="verifying || code.join('').length !== 6"
-              >
-                {{ verifying ? t('common.verifying') : t('profile.totp.verify') }}
-              </button>
-            </div>
-          </form>
-        </div>
+      <!-- Step 2: Verify Code -->
+      <div v-else class="setup-panel verify-panel">
+        <form id="totp-setup-verify-form" @submit.prevent="handleVerify">
+          <label class="input-label mb-3 block text-center">
+            {{ t('profile.totp.enterCode') }}
+          </label>
+          <div class="totp-code" role="group" :aria-label="t('profile.totp.enterCode')">
+            <input
+              v-for="(_, index) in 6"
+              :key="index"
+              :ref="(el) => setInputRef(el, index)"
+              type="text"
+              maxlength="1"
+              inputmode="numeric"
+              pattern="[0-9]"
+              autocomplete="off"
+              class="totp-cell"
+              :class="{ 'totp-cell-group-end': index === 1 || index === 3 }"
+              :aria-label="`${t('profile.totp.enterCode')} ${index + 1}`"
+              :disabled="verifying"
+              @input="handleCodeInput($event, index)"
+              @keydown="handleKeydown($event, index)"
+              @paste="handlePaste"
+            />
+          </div>
+        </form>
       </div>
     </div>
-  </div>
+
+    <template #footer>
+      <div class="setup-actions">
+        <button
+          v-if="step < 2"
+          type="button"
+          class="btn btn-secondary"
+          @click="emit('close')"
+        >
+          {{ t('common.cancel') }}
+        </button>
+        <button
+          v-if="step === 0 && !methodLoading"
+          type="button"
+          class="btn btn-primary"
+          :disabled="!canProceedFromVerify || setupLoading"
+          @click="handleVerifyAndSetup"
+        >
+          <Icon v-if="setupLoading" name="refresh" size="sm" class="animate-spin" />
+          {{ setupLoading ? t('common.loading') : t('common.next') }}
+        </button>
+        <button
+          v-else-if="step === 1"
+          type="button"
+          class="btn btn-primary"
+          :disabled="!setupData"
+          @click="step = 2"
+        >
+          {{ t('common.next') }}
+        </button>
+        <template v-else-if="step === 2">
+          <button type="button" class="btn btn-secondary" @click="step = 1">
+            {{ t('common.back') }}
+          </button>
+          <button
+            type="submit"
+            form="totp-setup-verify-form"
+            class="btn btn-primary"
+            :disabled="verifying || code.join('').length !== 6"
+          >
+            <Icon v-if="verifying" name="refresh" size="sm" class="animate-spin" />
+            {{ verifying ? t('common.verifying') : t('profile.totp.verify') }}
+          </button>
+        </template>
+      </div>
+    </template>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Icon from '@/components/icons/Icon.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useAppStore } from '@/stores/app'
 import { totpAPI } from '@/api'
 import type { TotpSetupResponse } from '@/types'
@@ -401,3 +404,221 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.setup-content,
+.setup-panel,
+.field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.setup-content {
+  gap: 1.25rem;
+}
+
+.setup-panel,
+.field-group {
+  gap: 0.5rem;
+}
+
+.step-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.step-track {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.step-dot {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+  color: var(--omnio-muted, #6b7280);
+  background: var(--omnio-surface, #fff);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.step-dot.active {
+  border-color: color-mix(in srgb, var(--omnio-primary, #3b82f6) 48%, var(--omnio-border, #e5e7eb));
+  color: var(--omnio-primary-strong, #2563eb);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 6%, var(--omnio-surface, #fff));
+}
+
+.loading-state {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+}
+
+.verification-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.qr-panel {
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.qr-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.qr-image {
+  width: 12rem;
+  height: 12rem;
+}
+
+.secret-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 2.5%, var(--omnio-surface, #fff));
+}
+
+.secret-card p {
+  margin-bottom: 0.25rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.secret-card code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.copy-button {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: var(--omnio-muted, #6b7280);
+  transition: color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.copy-button:hover {
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 5%, transparent);
+}
+
+.copy-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 20%, transparent);
+}
+
+.verify-panel {
+  padding: 0.5rem 0;
+}
+
+.totp-code {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.totp-cell {
+  width: 2.5rem;
+  height: 3rem;
+  border: 1px solid var(--omnio-border, #d1d5db);
+  border-radius: 0.625rem;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.totp-cell:focus {
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 20%, transparent);
+}
+
+.totp-cell:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.totp-cell-group-end {
+  margin-right: 0.25rem;
+}
+
+.setup-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 460px) {
+  .verification-row {
+    flex-direction: column;
+  }
+
+  .verification-row .btn,
+  .setup-actions .btn {
+    width: 100%;
+  }
+
+  .setup-actions {
+    flex-direction: column-reverse;
+  }
+
+  .totp-code {
+    gap: 0.35rem;
+  }
+
+  .totp-cell {
+    width: 2.2rem;
+  }
+
+  .totp-cell-group-end {
+    margin-right: 0.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-button,
+  .totp-cell {
+    transition-duration: 1ms;
+  }
+}
+</style>

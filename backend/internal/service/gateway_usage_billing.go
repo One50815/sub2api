@@ -235,6 +235,9 @@ func buildUsageBillingCommand(requestID string, usageLog *UsageLog, p *postUsage
 		AccountType:        p.Account.Type,
 		RequestPayloadHash: strings.TrimSpace(p.RequestPayloadHash),
 	}
+	if p.APIKey.GroupID != nil {
+		cmd.GroupID = *p.APIKey.GroupID
+	}
 	if usageLog != nil {
 		cmd.Model = usageLog.Model
 		cmd.BillingType = usageLog.BillingType
@@ -376,6 +379,10 @@ func syncBalanceCacheAfterDeduction(ctx context.Context, p *postUsageBillingPara
 	if p == nil || p.Cost == nil || p.User == nil || deps == nil || deps.billingCacheService == nil {
 		return
 	}
+	walletCost := resolvedWalletCost(p, result)
+	if walletCost <= 0 {
+		return
+	}
 	if result != nil && result.NewBalance != nil && deps.billingCacheService.balanceBelowEligibilityThreshold(*result.NewBalance) {
 		if err := deps.billingCacheService.InvalidateUserBalance(ctx, p.User.ID); err != nil {
 			slog.Warn("invalidate balance cache after exhausted deduction failed",
@@ -387,7 +394,7 @@ func syncBalanceCacheAfterDeduction(ctx context.Context, p *postUsageBillingPara
 		}
 		return
 	}
-	deps.billingCacheService.QueueDeductBalance(p.User.ID, p.Cost.ActualCost)
+	deps.billingCacheService.QueueDeductBalance(p.User.ID, walletCost)
 }
 
 // notifyBalanceLow sends balance low notification after deduction.
@@ -399,10 +406,11 @@ func notifyBalanceLow(p *postUsageBillingParams, deps *billingDeps, result *Usag
 			slog.Error("panic in notifyBalanceLow", "recover", r)
 		}
 	}()
-	if p.IsSubscriptionBill || p.Cost.ActualCost <= 0 || p.User == nil || deps.balanceNotifyService == nil {
+	walletCost := resolvedWalletCost(p, result)
+	if p.IsSubscriptionBill || walletCost <= 0 || p.User == nil || deps.balanceNotifyService == nil {
 		slog.Debug("notifyBalanceLow: skipped",
 			"is_subscription", p.IsSubscriptionBill,
-			"actual_cost", p.Cost.ActualCost,
+			"wallet_cost", walletCost,
 			"user_nil", p.User == nil,
 			"service_nil", deps.balanceNotifyService == nil,
 		)
@@ -413,22 +421,32 @@ func notifyBalanceLow(p *postUsageBillingParams, deps *billingDeps, result *Usag
 	slog.Debug("notifyBalanceLow: calling CheckBalanceAfterDeduction",
 		"user_id", p.User.ID,
 		"old_balance", oldBalance,
-		"cost", p.Cost.ActualCost,
+		"cost", walletCost,
 		"notify_enabled", p.User.BalanceNotifyEnabled,
 		"threshold", p.User.BalanceNotifyThreshold,
 		"result_has_new_balance", result != nil && result.NewBalance != nil,
 	)
-	deps.balanceNotifyService.CheckBalanceAfterDeduction(context.Background(), p.User, oldBalance, p.Cost.ActualCost)
+	deps.balanceNotifyService.CheckBalanceAfterDeduction(context.Background(), p.User, oldBalance, walletCost)
 }
 
 // resolveOldBalance returns the pre-deduction balance.
 // Prefers the DB transaction result (newBalance + cost) over snapshot.
 func resolveOldBalance(p *postUsageBillingParams, result *UsageBillingApplyResult) float64 {
 	if result != nil && result.NewBalance != nil {
-		return *result.NewBalance + p.Cost.ActualCost
+		return *result.NewBalance + resolvedWalletCost(p, result)
 	}
 	// Legacy fallback: snapshot balance from request context
 	return p.User.Balance
+}
+
+func resolvedWalletCost(p *postUsageBillingParams, result *UsageBillingApplyResult) float64 {
+	if result != nil && result.WalletCost != nil {
+		return *result.WalletCost
+	}
+	if p == nil || p.Cost == nil {
+		return 0
+	}
+	return p.Cost.ActualCost
 }
 
 // notifyAccountQuota sends account quota threshold notification after increment.
@@ -668,6 +686,9 @@ func (s *GatewayService) recordUsageCore(ctx context.Context, input *recordUsage
 	if apiKey.GroupID != nil && apiKey.Group != nil {
 		groupDefault := apiKey.Group.RateMultiplier
 		multiplier = s.ResolveUserGroupRateMultiplier(ctx, user.ID, *apiKey.GroupID, groupDefault)
+	}
+	if subscription != nil && subscription.Entitlement != nil {
+		multiplier = subscription.Entitlement.RateMultiplier
 	}
 	// token 倍率叠加高峰因子（token 计费含图片 token，图片按次倍率不受影响）。高峰因子按请求时刻现算，
 	// 不并入上面的 getUserGroupRateMultiplier，以免污染 user:group 倍率缓存。

@@ -1,13 +1,13 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
+    <div class="mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-5">
       <UsageStatsCards :stats="usageStats" :show-account-cost="false" :strike-standard-cost="true" />
 
       <div class="space-y-4">
-        <div class="card p-4">
-          <div class="flex flex-wrap items-center gap-4">
+        <div class="rounded-lg border border-gray-200 bg-white p-3 dark:border-dark-700 dark:bg-dark-800">
+          <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.dashboard.timeRange') }}:</span>
+              <span class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ t('admin.dashboard.timeRange') }}</span>
               <DateRangePicker
                 v-model:start-date="startDate"
                 v-model:end-date="endDate"
@@ -15,7 +15,7 @@
               />
             </div>
             <div class="ml-auto flex items-center gap-2">
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.dashboard.granularity') }}:</span>
+              <span class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ t('admin.dashboard.granularity') }}</span>
               <div class="w-28">
                 <Select v-model="granularity" :options="granularityOptions" @change="loadChartData" />
               </div>
@@ -23,7 +23,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <ModelDistributionChart
             v-model:metric="modelDistributionMetric"
             :model-stats="requestedModelStats"
@@ -47,7 +47,7 @@
           />
         </div>
 
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <EndpointDistributionChart
             v-model:source="endpointDistributionSource"
             v-model:metric="endpointDistributionMetric"
@@ -66,14 +66,15 @@
         </div>
       </div>
 
-      <div class="card p-6">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-          <div v-if="activeTab === 'errors'" class="flex flex-1 flex-wrap items-end gap-4">
-            <div class="w-full sm:w-auto sm:min-w-[220px]">
+      <section class="overflow-visible rounded-lg border border-gray-200 bg-white dark:border-dark-700 dark:bg-dark-800">
+        <div class="rounded-t-lg border-b border-gray-200 bg-gray-50/80 p-3 dark:border-dark-700 dark:bg-dark-900/40 sm:p-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div v-if="activeTab === 'errors'" class="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="w-full">
               <label class="input-label">{{ t('usage.errors.keyName') }}</label>
               <Select v-model="errorFilter.api_key_id" :options="errorKeyOptions" @change="applyErrorFilters" />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[220px]">
+            <div class="w-full">
               <label class="input-label">{{ t('usage.errors.model') }}</label>
               <Select
                 v-model="errorFilter.model"
@@ -85,43 +86,43 @@
                 @change="applyErrorFilters"
               />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[200px]">
+            <div class="w-full">
               <label class="input-label">{{ t('usage.errors.category') }}</label>
               <Select v-model="errorFilter.category" :options="errorCategoryOptions" @change="applyErrorFilters" />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[180px]">
+            <div class="w-full">
               <label class="input-label">{{ t('usage.errors.status') }}</label>
               <Select v-model="errorFilter.status_code" :options="errorStatusOptions" @change="applyErrorFilters" />
             </div>
           </div>
-          <div v-else class="flex flex-1 flex-wrap items-end gap-4">
-            <div class="w-full sm:w-auto sm:min-w-[220px]">
+          <div v-else class="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div class="w-full">
               <label class="input-label">{{ t('usage.apiKeyFilter') }}</label>
               <Select v-model="filters.api_key_id" :options="apiKeyOptions" @change="applyFilters" />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[220px]">
+            <div class="w-full">
               <label class="input-label">{{ t('usage.model') }}</label>
               <Select v-model="filters.model" :options="modelOptions" searchable @change="applyFilters" />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[200px]">
+            <div class="w-full">
               <label class="input-label">{{ t('admin.usage.group') }}</label>
               <Select v-model="filters.group_id" :options="groupOptions" searchable @change="applyFilters" />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[180px]">
+            <div class="w-full">
               <label class="input-label">{{ t('usage.type') }}</label>
               <Select v-model="filters.request_type" :options="requestTypeOptions" @change="applyFilters" />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[200px]">
+            <div class="w-full">
               <label class="input-label">{{ t('admin.usage.billingType') }}</label>
               <Select v-model="filters.billing_type" :options="billingTypeOptions" @change="applyFilters" />
             </div>
-            <div class="w-full sm:w-auto sm:min-w-[200px]">
+            <div class="w-full">
               <label class="input-label">{{ t('admin.usage.billingMode') }}</label>
               <Select v-model="filters.billing_mode" :options="billingModeOptions" @change="applyFilters" />
             </div>
           </div>
 
-          <div class="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
+          <div class="flex w-full flex-wrap items-center justify-end gap-2 xl:w-auto">
             <button type="button" @click="refreshData" :disabled="activeTab === 'errors' ? errorLoading : loading" class="btn btn-secondary">
               {{ t('common.refresh') }}
             </button>
@@ -159,9 +160,9 @@
             </button>
           </div>
         </div>
-      </div>
+        </div>
 
-      <div v-if="errorViewEnabled" class="flex gap-2 border-b border-gray-200 dark:border-dark-700">
+      <div v-if="errorViewEnabled" class="flex gap-1 border-b border-gray-200 px-3 pt-2 dark:border-dark-700 sm:px-4">
         <button class="tab" :class="{ 'tab-active': activeTab === 'usage' }" @click="activeTab = 'usage'">
           {{ t('usage.tabs.usage') }}
         </button>
@@ -171,31 +172,36 @@
       </div>
 
       <template v-if="activeTab === 'usage'">
-        <UsageTable
-          :data="usageLogs"
-          :loading="loading"
-          :columns="visibleColumns"
-          :server-side-sort="true"
-          :show-account-billing="false"
-          :show-upstream-endpoint="false"
-          default-sort-key="created_at"
-          default-sort-order="desc"
-          @sort="handleSort"
-          @ipGeoBatchFailed="handleIpGeoBatchFailed"
-        />
+        <div class="overflow-hidden">
+          <UsageTable
+            :data="usageLogs"
+            :loading="loading"
+            :columns="visibleColumns"
+            :server-side-sort="true"
+            :show-account-billing="false"
+            :show-upstream-endpoint="false"
+            flat
+            default-sort-key="created_at"
+            default-sort-order="desc"
+            @sort="handleSort"
+            @ipGeoBatchFailed="handleIpGeoBatchFailed"
+          />
+        </div>
 
-        <Pagination
-          v-if="pagination.total > 0"
-          :page="pagination.page"
-          :total="pagination.total"
-          :page-size="pagination.page_size"
-          @update:page="handlePageChange"
-          @update:pageSize="handlePageSizeChange"
-        />
+        <div v-if="pagination.total > 0" class="border-t border-gray-200 px-3 py-1 dark:border-dark-700 sm:px-4">
+          <Pagination
+            :page="pagination.page"
+            :total="pagination.total"
+            :page-size="pagination.page_size"
+            @update:page="handlePageChange"
+            @update:pageSize="handlePageSizeChange"
+          />
+        </div>
       </template>
 
       <UserErrorRequestsTable
         v-else-if="errorViewEnabled"
+        class="[&_.card]:rounded-none [&_.card]:border-0 [&_.card]:shadow-none"
         :rows="errorRows"
         :total="errorTotal"
         :loading="errorLoading"
@@ -207,6 +213,7 @@
         @update:pageSize="onErrorPageSize"
         @ipGeoBatchFailed="handleIpGeoBatchFailed"
       />
+      </section>
     </div>
   </AppLayout>
 

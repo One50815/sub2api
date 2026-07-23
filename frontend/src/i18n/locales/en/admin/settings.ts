@@ -82,7 +82,7 @@ export default {
             userPlaceholder: 'Search by email or username',
             changeUser: 'Change user',
             codeLabel: 'Custom Invite Code (optional)',
-            codePlaceholder: 'e.g. VIP2026',
+            codePlaceholder: 'e.g. PRO2026',
             codeHint: '4-32 characters; A-Z, 0-9, underscore, dash. Leave empty to keep current. Input is upper-cased.',
             rateLabel: 'Exclusive Rebate Rate (optional)',
             ratePlaceholder: 'e.g. 30',

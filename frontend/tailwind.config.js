@@ -5,19 +5,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 主色调 - Teal/Cyan 青色系
+        // Omnio console blue palette
         primary: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e'
+          50: '#eff8ff',
+          100: '#dbeeff',
+          200: '#bfe2ff',
+          300: '#93cefd',
+          400: '#60b3f7',
+          500: '#4295ed',
+          600: '#2f75d9',
+          700: '#285db4',
+          800: '#274f8e',
+          900: '#254474',
+          950: '#172b4d'
         },
         // 辅助色 - 深蓝灰
         accent: {
@@ -33,24 +33,25 @@ export default {
           900: '#0f172a',
           950: '#020617'
         },
-        // 深色模式背景
+        // Crisp charcoal dark mode used by the reference console
         dark: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617'
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#303030',
+          900: '#242424',
+          950: '#1b1b1b'
         }
       },
       fontFamily: {
         sans: [
-          'system-ui',
+          'Public Sans Variable',
+          'Public Sans',
           '-apple-system',
           'BlinkMacSystemFont',
           'Segoe UI',
@@ -65,22 +66,21 @@ export default {
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
       },
       boxShadow: {
-        glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        'glass-sm': '0 4px 16px rgba(0, 0, 0, 0.06)',
-        glow: '0 0 20px rgba(20, 184, 166, 0.25)',
-        'glow-lg': '0 0 40px rgba(20, 184, 166, 0.35)',
-        card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)',
-        'card-hover': '0 10px 40px rgba(0, 0, 0, 0.08)',
+        glass: '0 24px 70px rgba(15, 23, 42, 0.10)',
+        'glass-sm': '0 8px 28px rgba(15, 23, 42, 0.07)',
+        glow: '0 0 24px rgba(66, 149, 237, 0.22)',
+        'glow-lg': '0 0 44px rgba(66, 149, 237, 0.28)',
+        card: '0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.035)',
+        'card-hover': '0 18px 50px rgba(15, 23, 42, 0.09)',
         'inner-glow': 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #60b3f7 0%, #2f75d9 100%)',
         'gradient-dark': 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
         'gradient-glass':
           'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-        'mesh-gradient':
-          'radial-gradient(at 40% 20%, rgba(20, 184, 166, 0.12) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(20, 184, 166, 0.08) 0px, transparent 50%)'
+        'mesh-gradient': 'none'
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',

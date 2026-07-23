@@ -160,7 +160,7 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 		if abortIfAPIKeyGroupUnavailable(c, apiKey) {
 			return
 		}
-		if abortIfAPIKeyGroupNotAllowed(c, apiKey) {
+		if abortIfAPIKeyGroupNotAllowed(c, apiKeyService, apiKey) {
 			return
 		}
 		ctx := context.WithValue(c.Request.Context(), ctxkey.UserID, apiKey.User.ID)
@@ -177,7 +177,7 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 			c.Set(string(ContextKeyAPIKey), apiKey)
 			c.Set(string(ContextKeyUser), AuthSubject{
 				UserID:      apiKey.User.ID,
-				Concurrency: apiKey.User.Concurrency,
+				Concurrency: apiKeyService.ResolveConcurrency(c.Request.Context(), apiKey.User.ID, apiKey.User.Concurrency),
 			})
 			c.Set(string(ContextKeyUserRole), apiKey.User.Role)
 			setGroupContext(c, apiKey.Group)
@@ -247,6 +247,16 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 					_, validateErr = subscriptionService.ValidateAndCheckLimits(subscription, apiKey.Group)
 				}
 				if validateErr != nil {
+					if subscription.UsesWalletAfterQuota(apiKey.Group) {
+						if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) {
+							AbortWithError(c, 403, "INSUFFICIENT_BALANCE", "Insufficient account balance")
+							return
+						}
+						subscription = nil
+						validateErr = nil
+					}
+				}
+				if validateErr != nil {
 					code := "SUBSCRIPTION_INVALID"
 					status := 403
 					if errors.Is(validateErr, service.ErrDailyLimitExceeded) ||
@@ -260,7 +270,8 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 				}
 			} else {
 				// 非订阅模式 或 订阅模式但 subscriptionService 未注入：回退到余额检查
-				if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) {
+				if apiKeyBalanceBelowAuthThreshold(apiKey.User.Balance, cfg) &&
+					!apiKeyHasAvailableOmnioProQuota(c.Request.Context(), apiKeyService, apiKey) {
 					AbortWithError(c, 403, "INSUFFICIENT_BALANCE", "Insufficient account balance")
 					return
 				}
@@ -275,7 +286,7 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 		c.Set(string(ContextKeyAPIKey), apiKey)
 		c.Set(string(ContextKeyUser), AuthSubject{
 			UserID:      apiKey.User.ID,
-			Concurrency: apiKey.User.Concurrency,
+			Concurrency: apiKeyService.ResolveConcurrency(c.Request.Context(), apiKey.User.ID, apiKey.User.Concurrency),
 		})
 		c.Set(string(ContextKeyUserRole), apiKey.User.Role)
 		setGroupContext(c, apiKey.Group)
@@ -370,6 +381,13 @@ func apiKeyBalanceBelowAuthThreshold(balance float64, _ *config.Config) bool {
 	return balance <= 0
 }
 
+func apiKeyHasAvailableOmnioProQuota(ctx context.Context, apiKeyService *service.APIKeyService, apiKey *service.APIKey) bool {
+	if apiKeyService == nil || apiKey == nil || apiKey.User == nil || apiKey.GroupID == nil {
+		return false
+	}
+	return apiKeyService.HasAvailableOmnioProQuota(ctx, apiKey.User.ID, *apiKey.GroupID)
+}
+
 func abortIfAPIKeyGroupUnavailable(c *gin.Context, apiKey *service.APIKey) bool {
 	code, message, ok := validateAPIKeyGroupAvailable(apiKey)
 	if ok {
@@ -385,8 +403,8 @@ func abortIfAPIKeyGroupUnavailable(c *gin.Context, apiKey *service.APIKey) bool 
 	return true
 }
 
-func abortIfAPIKeyGroupNotAllowed(c *gin.Context, apiKey *service.APIKey) bool {
-	if validateAPIKeyGroupAllowed(apiKey) {
+func abortIfAPIKeyGroupNotAllowed(c *gin.Context, apiKeyService *service.APIKeyService, apiKey *service.APIKey) bool {
+	if validateAPIKeyGroupAllowed(c.Request.Context(), apiKeyService, apiKey) {
 		return false
 	}
 	service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonAPIKeyGroupUnavailable)
@@ -395,11 +413,14 @@ func abortIfAPIKeyGroupNotAllowed(c *gin.Context, apiKey *service.APIKey) bool {
 	return true
 }
 
-func validateAPIKeyGroupAllowed(apiKey *service.APIKey) bool {
+func validateAPIKeyGroupAllowed(ctx context.Context, apiKeyService *service.APIKeyService, apiKey *service.APIKey) bool {
 	if apiKey == nil || apiKey.GroupID == nil || apiKey.User == nil || apiKey.Group == nil {
 		return true
 	}
 	group := apiKey.Group
+	if apiKeyService != nil {
+		return apiKeyService.CanUserBindGroup(ctx, apiKey.User, group)
+	}
 	if group.IsSubscriptionType() {
 		return true
 	}

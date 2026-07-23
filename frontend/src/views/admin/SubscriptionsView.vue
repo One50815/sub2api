@@ -331,10 +331,10 @@
                   !row.group?.weekly_limit_usd &&
                   !row.group?.monthly_limit_usd
                 "
-                class="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-2 dark:from-emerald-900/20 dark:to-teal-900/20"
+                class="unlimited-badge"
               >
-                <span class="text-lg text-emerald-600 dark:text-emerald-400">∞</span>
-                <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                <Icon name="checkCircle" size="sm" aria-hidden="true" />
+                <span>
                   {{ t('admin.subscriptions.unlimited') }}
                 </span>
               </div>
@@ -675,84 +675,75 @@
       @cancel="showResetQuotaConfirm = false"
     />
     <!-- Subscription Guide Modal -->
-    <teleport to="body">
-      <transition name="modal">
-        <div v-if="showGuideModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @mousedown.self="showGuideModal = false">
-          <div class="fixed inset-0 bg-black/50" @click="showGuideModal = false"></div>
-          <div class="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl dark:bg-dark-800">
-            <button type="button" class="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" @click="showGuideModal = false">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+    <BaseDialog
+      :show="showGuideModal"
+      :title="t('admin.subscriptions.guide.title')"
+      width="wide"
+      :close-on-click-outside="true"
+      @close="showGuideModal = false"
+    >
+      <div class="subscription-guide">
+        <p class="guide-subtitle">{{ t('admin.subscriptions.guide.subtitle') }}</p>
 
-            <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">{{ t('admin.subscriptions.guide.title') }}</h2>
-            <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">{{ t('admin.subscriptions.guide.subtitle') }}</p>
+        <section class="guide-step">
+          <h3 class="guide-step-title">
+            <span class="guide-step-number">1</span>
+            {{ t('admin.subscriptions.guide.step1.title') }}
+          </h3>
+          <ol class="guide-list">
+            <li>{{ t('admin.subscriptions.guide.step1.line1') }}</li>
+            <li>{{ t('admin.subscriptions.guide.step1.line2') }}</li>
+            <li>{{ t('admin.subscriptions.guide.step1.line3') }}</li>
+          </ol>
+          <router-link to="/admin/groups" class="guide-link" @click="showGuideModal = false">
+            {{ t('admin.subscriptions.guide.step1.link') }}
+            <Icon name="arrowRight" size="xs" />
+          </router-link>
+        </section>
 
-            <!-- Step 1 -->
-            <div class="mb-5">
-              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">1</span>
-                {{ t('admin.subscriptions.guide.step1.title') }}
-              </h3>
-              <ol class="ml-8 list-decimal space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                <li>{{ t('admin.subscriptions.guide.step1.line1') }}</li>
-                <li>{{ t('admin.subscriptions.guide.step1.line2') }}</li>
-                <li>{{ t('admin.subscriptions.guide.step1.line3') }}</li>
-              </ol>
-              <div class="ml-8 mt-2">
-                <router-link
-                  to="/admin/groups"
-                  @click="showGuideModal = false"
-                  class="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                >
-                  {{ t('admin.subscriptions.guide.step1.link') }}
-                  <Icon name="arrowRight" size="xs" />
-                </router-link>
-              </div>
-            </div>
+        <section class="guide-step">
+          <h3 class="guide-step-title">
+            <span class="guide-step-number">2</span>
+            {{ t('admin.subscriptions.guide.step2.title') }}
+          </h3>
+          <ol class="guide-list">
+            <li>{{ t('admin.subscriptions.guide.step2.line1') }}</li>
+            <li>{{ t('admin.subscriptions.guide.step2.line2') }}</li>
+            <li>{{ t('admin.subscriptions.guide.step2.line3') }}</li>
+          </ol>
+        </section>
 
-            <!-- Step 2 -->
-            <div class="mb-5">
-              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">2</span>
-                {{ t('admin.subscriptions.guide.step2.title') }}
-              </h3>
-              <ol class="ml-8 list-decimal space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                <li>{{ t('admin.subscriptions.guide.step2.line1') }}</li>
-                <li>{{ t('admin.subscriptions.guide.step2.line2') }}</li>
-                <li>{{ t('admin.subscriptions.guide.step2.line3') }}</li>
-              </ol>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="mb-5">
-              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">3</span>
-                {{ t('admin.subscriptions.guide.step3.title') }}
-              </h3>
-              <div class="ml-8 overflow-hidden rounded-lg border border-gray-200 dark:border-dark-600">
-                <table class="w-full text-sm">
-                  <tbody>
-                    <tr v-for="(row, i) in guideActionRows" :key="i" class="border-b border-gray-100 dark:border-dark-700 last:border-0">
-                      <td class="whitespace-nowrap bg-gray-50 px-3 py-2 font-medium text-gray-700 dark:bg-dark-700 dark:text-gray-300">{{ row.action }}</td>
-                      <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ row.desc }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Tip -->
-            <div class="rounded-lg bg-blue-50 p-3 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-              {{ t('admin.subscriptions.guide.tip') }}
-            </div>
-
-            <div class="mt-4 text-right">
-              <button type="button" class="btn btn-primary btn-sm" @click="showGuideModal = false">{{ t('common.close') }}</button>
-            </div>
+        <section class="guide-step">
+          <h3 class="guide-step-title">
+            <span class="guide-step-number">3</span>
+            {{ t('admin.subscriptions.guide.step3.title') }}
+          </h3>
+          <div class="guide-table-wrap">
+            <table class="guide-table">
+              <tbody>
+                <tr v-for="(row, i) in guideActionRows" :key="i">
+                  <th scope="row">{{ row.action }}</th>
+                  <td>{{ row.desc }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </section>
+
+        <div class="guide-tip">
+          <Icon name="infoCircle" size="sm" aria-hidden="true" />
+          <span>{{ t('admin.subscriptions.guide.tip') }}</span>
         </div>
-      </transition>
-    </teleport>
+      </div>
+
+      <template #footer>
+        <div class="guide-actions">
+          <button type="button" class="btn btn-primary" @click="showGuideModal = false">
+            {{ t('common.close') }}
+          </button>
+        </div>
+      </template>
+    </BaseDialog>
   </AppLayout>
 </template>
 
@@ -1444,6 +1435,146 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.unlimited-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid color-mix(in srgb, #059669 20%, var(--omnio-border, #e5e7eb));
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  color: color-mix(in srgb, #047857 84%, var(--omnio-foreground, #111827));
+  background: color-mix(in srgb, #10b981 5%, var(--omnio-surface, #fff));
+  font-size: 0.75rem;
+  font-weight: 550;
+}
+
+.subscription-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.guide-subtitle {
+  margin-bottom: 0.25rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.guide-step {
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.625rem;
+  padding: 0.875rem;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 1.5%, var(--omnio-surface, #fff));
+}
+
+.guide-step-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--omnio-foreground, #111827);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.guide-step-number {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--omnio-primary, #3b82f6) 22%, var(--omnio-border, #e5e7eb));
+  border-radius: 0.5rem;
+  color: var(--omnio-primary, #3b82f6);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 6%, var(--omnio-surface, #fff));
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.guide-list {
+  margin: 0.625rem 0 0 2rem;
+  list-style: decimal;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0.625rem 0 0 2rem;
+  color: var(--omnio-primary, #3b82f6);
+  font-size: 0.8125rem;
+  font-weight: 550;
+}
+
+.guide-link:hover {
+  color: var(--omnio-primary-strong, #2563eb);
+}
+
+.guide-table-wrap {
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+}
+
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.guide-table tr + tr {
+  border-top: 1px solid var(--omnio-border, #e5e7eb);
+}
+
+.guide-table th,
+.guide-table td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.guide-table th {
+  width: 7.5rem;
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 3%, var(--omnio-surface, #fff));
+  font-weight: 600;
+}
+
+.guide-table td {
+  color: var(--omnio-muted, #6b7280);
+}
+
+.guide-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--omnio-primary, #3b82f6) 16%, var(--omnio-border, #e5e7eb));
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  color: var(--omnio-muted, #6b7280);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 4%, var(--omnio-surface, #fff));
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.guide-tip :deep(svg) {
+  flex: 0 0 auto;
+  color: var(--omnio-primary, #3b82f6);
+}
+
+.guide-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+}
+
 .usage-row {
   @apply space-y-1;
 }
@@ -1458,5 +1589,24 @@ onUnmounted(() => {
 
 .reset-info {
   @apply flex items-center gap-1 pl-12 text-[10px] text-blue-600 dark:text-blue-400;
+}
+
+@media (max-width: 560px) {
+  .guide-table,
+  .guide-table tbody,
+  .guide-table tr,
+  .guide-table th,
+  .guide-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .guide-table td {
+    padding-top: 0.35rem;
+  }
+
+  .guide-actions .btn {
+    width: 100%;
+  }
 }
 </style>

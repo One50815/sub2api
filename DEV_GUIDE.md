@@ -1,6 +1,8 @@
 # sub2api 项目开发指南
 
 > 本文档记录项目环境配置、常见坑点和注意事项，供 Claude Code 和团队成员参考。
+>
+> 本 Fork 的前端重做决策、后端定制规则和上游合并流程，以 [`docs/LONG_TERM_PROJECT_MEMORY_CN.md`](docs/LONG_TERM_PROJECT_MEMORY_CN.md) 为准。
 
 ## 一、项目基本信息
 

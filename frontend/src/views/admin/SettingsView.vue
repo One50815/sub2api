@@ -1,6 +1,12 @@
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-6xl space-y-6">
+    <div class="settings-page mx-auto max-w-[92rem] space-y-4">
+      <header class="settings-page-header">
+        <div class="min-w-0">
+          <h1 class="settings-page-title">{{ t("admin.settings.title") }}</h1>
+          <p class="settings-page-description">{{ t("admin.settings.description") }}</p>
+        </div>
+      </header>
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
         <div
@@ -9,7 +15,7 @@
       </div>
 
       <!-- Settings Form -->
-      <form v-else @submit.prevent="saveSettings" class="space-y-6" novalidate>
+      <form v-else @submit.prevent="saveSettings" class="settings-page-form" novalidate>
         <!-- Tab Navigation -->
         <div class="settings-tabs-shell">
           <nav
@@ -45,7 +51,7 @@
         </div>
 
         <!-- Tab: Security — Admin API Key -->
-        <div v-show="activeTab === 'security'" class="space-y-6">
+        <div v-show="activeTab === 'security'" class="settings-section space-y-4">
           <!-- Admin API Key Settings -->
           <div class="card">
             <div
@@ -202,7 +208,7 @@
         <!-- /Tab: Security — Admin API Key -->
 
         <!-- Tab: Gateway -->
-        <div v-show="activeTab === 'gateway'" class="space-y-6">
+        <div v-show="activeTab === 'gateway'" class="settings-section space-y-4">
           <!-- Overload Cooldown (529) Settings -->
           <div class="card">
             <div
@@ -1373,7 +1379,7 @@
         <!-- /Tab: Gateway -->
 
         <!-- Tab: Security — Registration, Turnstile, LinuxDo -->
-        <div v-show="activeTab === 'security'" class="space-y-6">
+        <div v-show="activeTab === 'security'" class="settings-section space-y-4">
           <!-- Registration Settings -->
           <div class="card">
             <div
@@ -3126,7 +3132,7 @@
         <!-- /Tab: Security — Registration, Turnstile, LinuxDo, OIDC -->
 
         <!-- Tab: Users -->
-        <div v-show="activeTab === 'users'" class="space-y-6">
+        <div v-show="activeTab === 'users'" class="settings-section space-y-4">
           <!-- Default Settings -->
           <div class="card">
             <div
@@ -3742,7 +3748,7 @@
         <!-- /Tab: Users -->
 
         <!-- Tab: Gateway — Claude Code, Scheduling -->
-        <div v-show="activeTab === 'gateway'" class="space-y-6">
+        <div v-show="activeTab === 'gateway'" class="settings-section space-y-4">
           <!-- Claude Code Settings -->
           <div class="card">
             <div
@@ -5131,24 +5137,19 @@
           </div>
 
           <!-- Web Search Test Dialog -->
-          <div
-            v-if="wsTestDialogOpen"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            @click.self="wsTestDialogOpen = false"
+          <BaseDialog
+            :show="wsTestDialogOpen"
+            :title="t('admin.settings.webSearchEmulation.testResultTitle')"
+            width="normal"
+            :close-on-click-outside="true"
+            @close="wsTestDialogOpen = false"
           >
-            <div
-              class="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-dark-800"
-            >
-              <h3
-                class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
-              >
-                {{ t("admin.settings.webSearchEmulation.testResultTitle") }}
-              </h3>
-              <div class="flex items-center gap-2">
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   v-model="wsTestQuery"
                   type="text"
-                  class="input flex-1 text-sm"
+                  class="input min-w-0 flex-1 text-sm"
                   :placeholder="
                     t('admin.settings.webSearchEmulation.testDefaultQuery')
                   "
@@ -5156,7 +5157,7 @@
                 />
                 <button
                   type="button"
-                  class="btn btn-primary btn-sm"
+                  class="btn btn-primary btn-sm shrink-0"
                   :disabled="wsTestLoading"
                   @click="testWebSearchProvider()"
                 >
@@ -5167,10 +5168,11 @@
                   }}
                 </button>
               </div>
+
               <!-- Test results -->
               <div
                 v-if="wsTestResult"
-                class="mt-4 max-h-80 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-dark-700"
+                class="max-h-80 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/80 p-4 dark:border-dark-700 dark:bg-dark-800/70"
               >
                 <p
                   class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -5193,7 +5195,8 @@
                   <a
                     :href="r.url"
                     target="_blank"
-                    class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    rel="noopener noreferrer"
+                    class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
                     >{{ r.title }}</a
                   >
                   <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
@@ -5201,17 +5204,18 @@
                   </p>
                 </div>
               </div>
-              <div class="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  @click="wsTestDialogOpen = false"
-                >
-                  {{ t("common.close") }}
-                </button>
-              </div>
             </div>
-          </div>
+
+            <template #footer>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="wsTestDialogOpen = false"
+              >
+                {{ t("common.close") }}
+              </button>
+            </template>
+          </BaseDialog>
 
         <!-- Usage Records Settings -->
         <div class="card">
@@ -5245,7 +5249,7 @@
         <!-- /Tab: Gateway — Claude Code, Scheduling -->
 
         <!-- Tab: General -->
-        <div v-show="activeTab === 'general'" class="space-y-6">
+        <div v-show="activeTab === 'general'" class="settings-section space-y-4">
           <!-- Site Settings -->
           <div class="card">
             <div
@@ -5600,6 +5604,8 @@
             </div>
           </div>
 
+          <TicketSettingsCard />
+
           <!-- Custom Menu Items -->
           <div class="card">
             <div
@@ -5794,7 +5800,7 @@
 	        <!-- /Tab: General -->
 
 	        <!-- Tab: Login Agreement -->
-	        <div v-show="activeTab === 'agreement'" class="space-y-6">
+	        <div v-show="activeTab === 'agreement'" class="settings-section space-y-4">
 	          <div class="card">
 	            <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
 	              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -5996,7 +6002,7 @@
         <!-- /Tab: Login Agreement -->
 
 	        <!-- Tab: Features (功能开关) -->
-        <div v-show="activeTab === 'features'" class="space-y-6">
+        <div v-show="activeTab === 'features'" class="settings-section space-y-4">
 
         <div class="card">
           <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
@@ -6383,179 +6389,181 @@
         </div>
 
         <!-- Affiliate add/edit modal -->
-        <div
-          v-if="affiliateModal.open"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          @click.self="closeAffiliateModal"
+        <BaseDialog
+          :show="affiliateModal.open"
+          :title="
+            affiliateModal.mode === 'add'
+              ? t('admin.settings.features.affiliate.modal.addTitle')
+              : t('admin.settings.features.affiliate.modal.editTitle')
+          "
+          width="normal"
+          :close-on-click-outside="true"
+          @close="closeAffiliateModal"
         >
-          <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-dark-900">
-            <h3 class="mb-4 text-lg font-semibold">
-              {{ affiliateModal.mode === 'add' ? t('admin.settings.features.affiliate.modal.addTitle') : t('admin.settings.features.affiliate.modal.editTitle') }}
-            </h3>
-            <div class="space-y-4">
-              <div v-if="affiliateModal.mode === 'add'">
-                <label class="input-label">{{ t('admin.settings.features.affiliate.modal.userLabel') }}</label>
-                <!-- Chip showing the picked user; clicking it re-opens the search -->
-                <div
-                  v-if="affiliateModal.selectedUser"
-                  class="flex items-center justify-between rounded-md border border-primary-200 bg-primary-50 px-3 py-2 dark:border-primary-700/50 dark:bg-primary-900/20"
-                >
-                  <div class="text-sm">
-                    <span class="font-medium text-gray-900 dark:text-white">{{ affiliateModal.selectedUser.email }}</span>
-                    <span class="ml-1 text-xs text-gray-500">({{ affiliateModal.selectedUser.username }})</span>
-                  </div>
-                  <button
-                    type="button"
-                    class="text-lg leading-none text-gray-400 hover:text-red-600"
-                    :title="t('admin.settings.features.affiliate.modal.changeUser')"
-                    @click="clearSelectedAffiliateUser"
-                  >
-                    ×
-                  </button>
-                </div>
-                <!-- Search input + result dropdown — hidden once a selection is made -->
-                <template v-else>
-                  <input
-                    v-model="affiliateModal.userQuery"
-                    type="text"
-                    class="input"
-                    :placeholder="t('admin.settings.features.affiliate.modal.userPlaceholder')"
-                    @input="onAffiliateUserSearchInput"
-                  />
-                  <div
-                    v-if="affiliateModal.userResults.length > 0"
-                    class="mt-1 max-h-40 overflow-y-auto rounded border border-gray-200 dark:border-dark-700"
-                  >
-                    <button
-                      v-for="u in affiliateModal.userResults"
-                      :key="u.id"
-                      type="button"
-                      class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-dark-800"
-                      @click="selectAffiliateUser(u)"
-                    >
-                      {{ u.email }} <span class="text-xs text-gray-500">({{ u.username }})</span>
-                    </button>
-                  </div>
-                </template>
-              </div>
-              <div v-else>
-                <label class="input-label">{{ t('admin.settings.features.affiliate.modal.userLabel') }}</label>
-                <input
-                  type="text"
-                  class="input"
-                  :value="affiliateModal.editingEntry ? affiliateModal.editingEntry.email : ''"
-                  disabled
-                />
-              </div>
-
-              <div>
-                <label class="input-label">{{ t('admin.settings.features.affiliate.modal.codeLabel') }}</label>
-                <input
-                  v-model="affiliateModal.code"
-                  type="text"
-                  class="input font-mono"
-                  :placeholder="t('admin.settings.features.affiliate.modal.codePlaceholder')"
-                  maxlength="32"
-                />
-                <p class="mt-1 text-xs text-gray-400">
-                  {{ t('admin.settings.features.affiliate.modal.codeHint') }}
-                </p>
-              </div>
-
-              <div>
-                <label class="input-label">{{ t('admin.settings.features.affiliate.modal.rateLabel') }}</label>
-                <div class="relative">
-                  <input
-                    v-model="affiliateModal.rate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    class="input pr-8"
-                    :placeholder="t('admin.settings.features.affiliate.modal.ratePlaceholder')"
-                  />
-                  <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
-                </div>
-                <p class="mt-1 text-xs text-gray-400">
-                  {{ t('admin.settings.features.affiliate.modal.rateHint') }}
-                </p>
-              </div>
-            </div>
-
-            <div class="mt-6 flex items-center justify-between gap-3">
-              <p
-                v-if="!affiliateModalCanSubmit"
-                class="text-xs text-gray-500 dark:text-gray-400"
+          <div class="space-y-4">
+            <div v-if="affiliateModal.mode === 'add'">
+              <label class="input-label">{{ t('admin.settings.features.affiliate.modal.userLabel') }}</label>
+              <!-- Chip showing the picked user; clicking it re-opens the search -->
+              <div
+                v-if="affiliateModal.selectedUser"
+                class="flex items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50/80 px-3 py-2 dark:border-primary-700/50 dark:bg-primary-900/20"
               >
-                {{ t('admin.settings.features.affiliate.modal.errorEmpty') }}
-              </p>
-              <span v-else></span>
-              <div class="flex gap-2">
-                <button type="button" class="btn btn-secondary" @click="closeAffiliateModal">
-                  {{ t('common.cancel') }}
-                </button>
+                <div class="min-w-0 text-sm">
+                  <span class="block truncate font-medium text-gray-900 dark:text-white">{{ affiliateModal.selectedUser.email }}</span>
+                  <span class="block truncate text-xs text-gray-500">{{ affiliateModal.selectedUser.username }}</span>
+                </div>
                 <button
                   type="button"
-                  class="btn btn-primary"
-                  :disabled="affiliateModal.saving || !affiliateModalCanSubmit"
-                  @click="submitAffiliateModal"
+                  class="btn btn-ghost btn-icon btn-sm shrink-0 text-gray-500 hover:text-red-600"
+                  :title="t('admin.settings.features.affiliate.modal.changeUser')"
+                  @click="clearSelectedAffiliateUser"
                 >
-                  {{ affiliateModal.saving ? t('common.saving') : t('common.save') }}
+                  <Icon name="x" size="sm" />
+                  <span class="sr-only">{{ t('admin.settings.features.affiliate.modal.changeUser') }}</span>
                 </button>
               </div>
+              <!-- Search input + result dropdown — hidden once a selection is made -->
+              <template v-else>
+                <input
+                  v-model="affiliateModal.userQuery"
+                  type="text"
+                  class="input"
+                  :placeholder="t('admin.settings.features.affiliate.modal.userPlaceholder')"
+                  @input="onAffiliateUserSearchInput"
+                />
+                <div
+                  v-if="affiliateModal.userResults.length > 0"
+                  class="mt-1 max-h-40 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-dark-700 dark:bg-dark-800"
+                >
+                  <button
+                    v-for="u in affiliateModal.userResults"
+                    :key="u.id"
+                    type="button"
+                    class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-dark-700"
+                    @click="selectAffiliateUser(u)"
+                  >
+                    <span class="block truncate font-medium text-gray-900 dark:text-white">{{ u.email }}</span>
+                    <span class="block truncate text-xs text-gray-500">{{ u.username }}</span>
+                  </button>
+                </div>
+              </template>
+            </div>
+            <div v-else>
+              <label class="input-label">{{ t('admin.settings.features.affiliate.modal.userLabel') }}</label>
+              <input
+                type="text"
+                class="input"
+                :value="affiliateModal.editingEntry ? affiliateModal.editingEntry.email : ''"
+                disabled
+              />
+            </div>
+
+            <div>
+              <label class="input-label">{{ t('admin.settings.features.affiliate.modal.codeLabel') }}</label>
+              <input
+                v-model="affiliateModal.code"
+                type="text"
+                class="input font-mono"
+                :placeholder="t('admin.settings.features.affiliate.modal.codePlaceholder')"
+                maxlength="32"
+              />
+              <p class="mt-1 text-xs text-gray-400">
+                {{ t('admin.settings.features.affiliate.modal.codeHint') }}
+              </p>
+            </div>
+
+            <div>
+              <label class="input-label">{{ t('admin.settings.features.affiliate.modal.rateLabel') }}</label>
+              <div class="relative">
+                <input
+                  v-model="affiliateModal.rate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  class="input pr-8"
+                  :placeholder="t('admin.settings.features.affiliate.modal.ratePlaceholder')"
+                />
+                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
+              </div>
+              <p class="mt-1 text-xs text-gray-400">
+                {{ t('admin.settings.features.affiliate.modal.rateHint') }}
+              </p>
             </div>
           </div>
-        </div>
+
+          <template #footer>
+            <p
+              v-if="!affiliateModalCanSubmit"
+              class="mr-auto text-xs text-gray-500 dark:text-gray-400"
+            >
+              {{ t('admin.settings.features.affiliate.modal.errorEmpty') }}
+            </p>
+            <button type="button" class="btn btn-secondary" @click="closeAffiliateModal">
+              {{ t('common.cancel') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="affiliateModal.saving || !affiliateModalCanSubmit"
+              @click="submitAffiliateModal"
+            >
+              {{ affiliateModal.saving ? t('common.saving') : t('common.save') }}
+            </button>
+          </template>
+        </BaseDialog>
 
         <!-- Affiliate batch rate modal -->
-        <div
-          v-if="affiliateBatchModal.open"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          @click.self="affiliateBatchModal.open = false"
+        <BaseDialog
+          :show="affiliateBatchModal.open"
+          :title="
+            t('admin.settings.features.affiliate.batchModal.title', {
+              count: affiliateState.selected.length,
+            })
+          "
+          width="normal"
+          :close-on-click-outside="true"
+          @close="affiliateBatchModal.open = false"
         >
-          <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-dark-900">
-            <h3 class="mb-4 text-lg font-semibold">
-              {{ t('admin.settings.features.affiliate.batchModal.title', { count: affiliateState.selected.length }) }}
-            </h3>
-            <p class="mb-4 text-sm text-gray-500">
-              {{ t('admin.settings.features.affiliate.batchModal.hint') }}
-            </p>
-            <div class="relative">
-              <input
-                v-model="affiliateBatchModal.rate"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                class="input pr-8"
-                :placeholder="t('admin.settings.features.affiliate.batchModal.placeholder')"
-              />
-              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
-            </div>
-            <p class="mt-2 text-xs text-gray-400">
-              {{ t('admin.settings.features.affiliate.batchModal.clearHint') }}
-            </p>
-            <div class="mt-6 flex justify-end gap-2">
-              <button type="button" class="btn btn-secondary" @click="affiliateBatchModal.open = false">
-                {{ t('common.cancel') }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                :disabled="affiliateBatchModal.saving"
-                @click="submitAffiliateBatchModal"
-              >
-                {{ affiliateBatchModal.saving ? t('common.saving') : t('common.save') }}
-              </button>
-            </div>
+          <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            {{ t('admin.settings.features.affiliate.batchModal.hint') }}
+          </p>
+          <div class="relative">
+            <input
+              v-model="affiliateBatchModal.rate"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              class="input pr-8"
+              :placeholder="t('admin.settings.features.affiliate.batchModal.placeholder')"
+            />
+            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
           </div>
-        </div>
+          <p class="mt-2 text-xs text-gray-400">
+            {{ t('admin.settings.features.affiliate.batchModal.clearHint') }}
+          </p>
+
+          <template #footer>
+            <button type="button" class="btn btn-secondary" @click="affiliateBatchModal.open = false">
+              {{ t('common.cancel') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="affiliateBatchModal.saving"
+              @click="submitAffiliateBatchModal"
+            >
+              {{ affiliateBatchModal.saving ? t('common.saving') : t('common.save') }}
+            </button>
+          </template>
+        </BaseDialog>
 
         </div><!-- /Tab: Features -->
 
         <!-- Tab: Email -->
         <!-- Tab: Payment -->
-        <div v-show="activeTab === 'payment'" class="space-y-6">
+        <div v-show="activeTab === 'payment'" class="settings-section space-y-4">
           <!-- Payment System Settings -->
           <div class="card">
             <div
@@ -7074,7 +7082,7 @@
           />
         </div>
 
-        <div v-show="activeTab === 'email'" class="space-y-6">
+        <div v-show="activeTab === 'email'" class="settings-section space-y-4">
           <!-- Email disabled hint - show when email_verify_enabled is off -->
           <div v-if="!form.email_verify_enabled" class="card">
             <div class="p-6">
@@ -7496,12 +7504,12 @@
         <!-- /Tab: Email -->
 
         <!-- Tab: Backup -->
-        <div v-show="activeTab === 'backup'">
+        <div v-show="activeTab === 'backup'" class="settings-section">
           <BackupSettings />
         </div>
 
         <!-- Save Button -->
-        <div v-show="activeTab !== 'backup'" class="flex justify-end">
+        <div v-show="activeTab !== 'backup'" class="settings-save-bar flex justify-end">
           <button
             type="submit"
             :disabled="saving || loadFailed"
@@ -7609,6 +7617,7 @@ import type {
 import type { ProviderInstance } from "@/types/payment";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import Icon from "@/components/icons/Icon.vue";
+import BaseDialog from "@/components/common/BaseDialog.vue";
 import Select from "@/components/common/Select.vue";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
 import PaymentProviderList from "@/components/payment/PaymentProviderList.vue";
@@ -7621,6 +7630,7 @@ import ImageUpload from "@/components/common/ImageUpload.vue";
 import BackupSettings from "@/views/admin/BackupView.vue";
 import EmailTemplateEditor from "@/views/admin/settings/EmailTemplateEditor.vue";
 import OpenAIFastPolicyUserSelector from "@/views/admin/settings/OpenAIFastPolicyUserSelector.vue";
+import TicketSettingsCard from "@/components/admin/settings/TicketSettingsCard.vue";
 import { useClipboard } from "@/composables/useClipboard";
 import {
   useStepUp,
@@ -11393,7 +11403,7 @@ watch(
   height: 2px;
   border-radius: 9999px;
   content: "";
-  background: linear-gradient(90deg, #14b8a6, #0ea5e9);
+  background: linear-gradient(90deg, #4295ed, #6366f1);
 }
 
 .settings-tab-icon {
@@ -11412,6 +11422,198 @@ watch(
 .settings-tab-label {
   @apply min-w-0 overflow-hidden text-ellipsis whitespace-nowrap leading-none;
 }
+
+/* Reference-console settings workspace: compact title, drill-in navigation and
+   dense neutral cards. The existing tab state remains the business source of
+   truth; only its presentation changes. */
+.settings-page-header {
+  @apply flex min-h-10 items-center justify-between gap-4;
+}
+
+.settings-page-title {
+  @apply truncate text-lg font-semibold tracking-tight text-gray-950 dark:text-white;
+}
+
+.settings-page-description {
+  @apply mt-0.5 text-xs text-gray-500 dark:text-dark-400;
+}
+
+.settings-page-form {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem 1.25rem;
+}
+
+.settings-tabs-shell {
+  position: sticky;
+  top: calc(var(--omnio-header-height) + 0.75rem);
+  z-index: 20;
+  grid-column: 1;
+  grid-row: 1 / span 32;
+  margin: 0;
+  padding: 0.375rem;
+  border: 1px solid var(--omnio-border);
+  border-radius: 0.75rem;
+  background: var(--omnio-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.settings-tabs-scroll {
+  overflow: visible;
+}
+
+.settings-tabs {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.125rem;
+}
+
+.settings-tab {
+  width: 100%;
+  min-width: 0;
+  height: 2.25rem;
+  flex: none;
+  justify-content: flex-start;
+  gap: 0.625rem;
+  overflow: hidden;
+  padding: 0 0.625rem;
+  border: 0;
+  border-radius: 0.5rem;
+  color: var(--omnio-muted);
+  font-size: 0.78rem;
+  font-weight: 520;
+  box-shadow: none;
+}
+
+.settings-tab::before,
+.settings-tab::after {
+  display: none;
+}
+
+.settings-tab:hover,
+.settings-tab:focus-visible {
+  color: var(--omnio-foreground);
+  background: color-mix(in srgb, var(--omnio-foreground) 4.5%, transparent);
+}
+
+.settings-tab-active {
+  color: var(--omnio-foreground);
+  background: color-mix(in srgb, var(--omnio-primary) 10%, var(--omnio-surface));
+  box-shadow: none;
+}
+
+.settings-tab-icon,
+.settings-tab-active .settings-tab-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  border-radius: 0;
+  color: currentColor;
+  background: transparent;
+}
+
+.settings-tab-label {
+  line-height: 1.25rem;
+}
+
+.settings-section,
+.settings-save-bar {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.settings-section > .card,
+.settings-section :deep(.card) {
+  border-color: var(--omnio-border);
+  border-radius: 0.75rem;
+  background: var(--omnio-surface);
+  box-shadow: none;
+}
+
+.settings-section > .card > :first-child {
+  padding: 1rem 1.125rem 0.875rem;
+  border-color: var(--omnio-border);
+}
+
+.settings-section > .card > :first-child h2 {
+  font-size: 0.875rem;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+}
+
+.settings-section > .card > :first-child p {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.3rem;
+}
+
+.settings-section > .card > :last-child {
+  padding: 1rem 1.125rem;
+}
+
+.settings-save-bar {
+  position: sticky;
+  bottom: 0.5rem;
+  z-index: 10;
+  margin-top: 0.25rem;
+  padding: 0.625rem;
+  border: 1px solid var(--omnio-border);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--omnio-surface) 92%, transparent);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.08);
+  backdrop-filter: blur(14px);
+}
+
+@media (max-width: 1023px) {
+  .settings-page-form {
+    display: block;
+  }
+
+  .settings-tabs-shell {
+    position: sticky;
+    top: calc(var(--omnio-header-height) + 0.25rem);
+    margin-bottom: 1rem;
+    padding: 0.25rem;
+    border-radius: 0.625rem;
+  }
+
+  .settings-tabs-scroll {
+    overflow-x: auto;
+  }
+
+  .settings-tabs {
+    min-width: max-content;
+    flex-direction: row;
+  }
+
+  .settings-tab {
+    width: auto;
+    min-width: max-content;
+    padding: 0 0.75rem;
+  }
+
+  .settings-section {
+    margin-bottom: 1rem;
+  }
+
+  .settings-save-bar {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-page-description {
+    display: none;
+  }
+
+  .settings-tab-icon {
+    display: none;
+  }
+}
 </style>
 
 <style>
@@ -11419,20 +11621,18 @@ watch(
    because Vue's scoped-CSS compiler was dropping the `:global(.dark) ...`
    rules in the production build, leaving inactive tabs unreadable on dark. */
 .dark .settings-tabs-shell {
-  border-color: rgb(51 65 85 / 0.65);
-  background: rgb(15 23 42 / 0.86);
-  box-shadow:
-    0 16px 36px rgb(0 0 0 / 0.28),
-    0 1px 0 rgb(255 255 255 / 0.06) inset;
+  border-color: var(--omnio-border);
+  background: var(--omnio-surface);
+  box-shadow: none;
 }
 
 .dark .settings-tab::before {
-  background: linear-gradient(135deg, rgb(30 41 59 / 0.9), rgb(51 65 85 / 0.62));
+  display: none;
 }
 
 .dark .settings-tab-active {
-  box-shadow:
-    0 12px 26px rgb(0 0 0 / 0.22),
-    0 1px 0 rgb(255 255 255 / 0.08) inset;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--omnio-primary) 12%, var(--omnio-surface));
+  box-shadow: none;
 }
 </style>

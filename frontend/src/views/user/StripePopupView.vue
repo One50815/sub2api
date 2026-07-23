@@ -1,18 +1,24 @@
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
+  <div class="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-dark-950">
     <div
-      class="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+      class="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-dark-700 dark:bg-dark-900"
     >
       <!-- Amount + Order ID -->
-      <div v-if="amount" class="text-center">
-        <p class="text-3xl font-bold" :style="{ color: methodColor }">¥{{ amount }}</p>
-        <p v-if="orderId" class="mt-1 text-sm text-gray-500 dark:text-slate-400">
+      <div v-if="amount" class="border-b border-gray-200 px-6 py-6 text-center dark:border-dark-700">
+        <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 ring-1 ring-gray-200 dark:bg-dark-800 dark:ring-dark-700" :style="{ color: methodColor }">
+          <Icon name="creditCard" size="md" />
+        </div>
+        <p class="font-mono text-3xl font-bold tabular-nums text-gray-950 dark:text-white">¥{{ amount }}</p>
+        <p v-if="orderId" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {{ t('payment.orders.orderId') }}: {{ orderId }}
         </p>
       </div>
 
       <!-- Error -->
-      <div v-if="error" class="space-y-3">
+      <div v-if="error" class="space-y-4 p-6 text-center">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 ring-1 ring-red-100 dark:bg-red-500/10 dark:ring-red-500/20">
+          <Icon name="xCircle" size="lg" class="text-red-600 dark:text-red-400" />
+        </div>
         <div
           class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400"
         >
@@ -28,9 +34,11 @@
       </div>
 
       <!-- Success -->
-      <div v-else-if="success" class="space-y-3 py-4 text-center">
-        <div class="text-5xl text-green-600 dark:text-green-400">✓</div>
-        <p class="text-sm text-gray-500 dark:text-slate-400">{{ t('payment.result.success') }}</p>
+      <div v-else-if="success" class="space-y-3 p-6 text-center">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
+          <Icon name="checkCircle" size="lg" class="text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('payment.result.success') }}</p>
         <button
           class="text-sm underline dark:text-blue-400 dark:hover:text-blue-300"
           :style="{ color: methodColor }"
@@ -41,12 +49,12 @@
       </div>
 
       <!-- Loading / Redirecting -->
-      <div v-else class="flex items-center justify-center py-8">
+      <div v-else class="flex items-center justify-center px-6 py-10">
         <div
           class="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
           :style="{ borderColor: methodColor, borderTopColor: 'transparent' }"
         />
-        <span class="ml-3 text-sm text-gray-500 dark:text-slate-400">{{ hint }}</span>
+        <span class="ml-3 text-sm text-gray-500 dark:text-gray-400">{{ hint }}</span>
       </div>
     </div>
   </div>
@@ -56,6 +64,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
+import Icon from '@/components/icons/Icon.vue'
 import { extractI18nErrorMessage } from '@/utils/apiError'
 import { isMobileDevice } from '@/utils/device'
 import { buildApiUrl } from '@/api/client'

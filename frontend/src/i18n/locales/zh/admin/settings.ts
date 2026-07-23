@@ -82,7 +82,7 @@ export default {
             userPlaceholder: '搜索邮箱或用户名',
             changeUser: '更换用户',
             codeLabel: '专属邀请码（可选）',
-            codePlaceholder: '例如 VIP2026',
+            codePlaceholder: '例如 PRO2026',
             codeHint: '4-32 位，仅支持大写字母、数字、下划线、连字符；留空表示不修改；输入将自动转大写。',
             rateLabel: '专属返利比例（可选）',
             ratePlaceholder: '例如 30',

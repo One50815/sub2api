@@ -509,6 +509,12 @@ export interface Group {
   description: string | null
   platform: GroupPlatform
   rate_multiplier: number
+  personal_rate_multiplier?: number | null
+  pro_rate_multiplier?: number | null
+  effective_rate_multiplier?: number | null
+  pro_only?: boolean
+  pro_access?: boolean
+  pro_level_name?: string
   rpm_limit?: number // Group-level RPM cap (0 = unlimited); overrides user-level rpm_limit when set
   is_exclusive: boolean
   status: 'active' | 'inactive'
@@ -1768,6 +1774,7 @@ export interface UserSubscription {
   expires_at: string | null
   user?: User
   group?: Group
+  entitlement?: import('./membership').SubscriptionEntitlement | null
 }
 
 export interface SubscriptionProgress {
@@ -2136,6 +2143,7 @@ export interface UpdateScheduledTestPlanRequest {
 
 // Payment types
 export type { SubscriptionPlan, PaymentOrder, CheckoutInfoResponse } from './payment'
+export * from './ticket'
 
 export type {
   PlatformQuotaItem,

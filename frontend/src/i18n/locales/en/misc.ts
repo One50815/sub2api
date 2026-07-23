@@ -154,13 +154,13 @@ export default {
     admin: {
       welcome: {
         title: '👋 Welcome to Sub2API',
-        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API is a powerful AI service gateway platform that helps you easily manage and distribute AI services.</p><p style="margin-bottom: 12px;"><b>🎯 Core Features:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>Group Management</b> - Create service tiers (VIP, Free Trial, etc.)</li><li>🔗 <b>Account Pool</b> - Connect multiple upstream AI service accounts</li><li>🔑 <b>Key Distribution</b> - Generate independent API Keys for users</li><li>💰 <b>Billing Control</b> - Flexible rate and quota management</li></ul><p style="color: #10b981; font-weight: 600;">Let\'s complete the initial setup in 3 minutes →</p></div>',
+        description: '<div style="line-height: 1.8;"><p style="margin-bottom: 16px;">Sub2API is a powerful AI service gateway platform that helps you easily manage and distribute AI services.</p><p style="margin-bottom: 12px;"><b>🎯 Core Features:</b></p><ul style="margin-left: 20px; margin-bottom: 16px;"><li>📦 <b>Group Management</b> - Create service tiers (Omnio Pro, Free Trial, etc.)</li><li>🔗 <b>Account Pool</b> - Connect multiple upstream AI service accounts</li><li>🔑 <b>Key Distribution</b> - Generate independent API Keys for users</li><li>💰 <b>Billing Control</b> - Flexible rate and quota management</li></ul><p style="color: #10b981; font-weight: 600;">Let\'s complete the initial setup in 3 minutes →</p></div>',
         nextBtn: 'Start Setup 🚀',
         prevBtn: 'Skip'
       },
       groupManage: {
         title: '📦 Step 1: Group Management',
-        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>What is a Group?</b></p><p style="margin-bottom: 12px;">Groups are the core concept of Sub2API, like a "service package":</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 Each group can contain multiple upstream accounts</li><li>💰 Each group has independent billing multiplier</li><li>👥 Can be set as public or exclusive</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Example:</b> You can create "VIP Premium" (high rate) and "Free Trial" (low rate) groups</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Group Management" on the left sidebar</p></div>'
+        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>What is a Group?</b></p><p style="margin-bottom: 12px;">Groups are the core concept of Sub2API, like a "service package":</p><ul style="margin-left: 20px; margin-bottom: 12px; font-size: 13px;"><li>🎯 Each group can contain multiple upstream accounts</li><li>💰 Each group has independent billing multiplier</li><li>👥 Can be set as public or exclusive</li></ul><p style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Example:</b> You can create an "Omnio Pro" group with a preferred rate and a "Free Trial" group</p><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Group Management" on the left sidebar</p></div>'
       },
       createGroup: {
         title: '➕ Create New Group',
@@ -168,7 +168,7 @@ export default {
       },
       groupName: {
         title: '✏️ 1. Group Name',
-        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;">Give your group an easy-to-identify name.</p><div style="padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>💡 Naming Suggestions:</b><ul style="margin: 8px 0 0 16px;"><li>"Test Group" - For testing</li><li>"VIP Premium" - High-quality service</li><li>"Free Trial" - Trial version</li></ul></div><p style="font-size: 13px; color: #6b7280;">Click "Next" when done</p></div>',
+        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;">Give your group an easy-to-identify name.</p><div style="padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>💡 Naming Suggestions:</b><ul style="margin: 8px 0 0 16px;"><li>"Test Group" - For testing</li><li>"Omnio Pro" - High-quality service</li><li>"Free Trial" - Trial version</li></ul></div><p style="font-size: 13px; color: #6b7280;">Click "Next" when done</p></div>',
         nextBtn: 'Next'
       },
       groupPlatform: {
@@ -183,7 +183,7 @@ export default {
       },
       groupExclusive: {
         title: '🔒 4. Exclusive Group (Optional)',
-        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;">Control group visibility and access permissions.</p><div style="padding: 8px 12px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>🔐 Permission Guide:</b><ul style="margin: 8px 0 0 16px;"><li><b>Off</b> - Public group, visible to all users</li><li><b>On</b> - Exclusive group, only for specified users</li></ul></div><p style="padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Use Cases:</b> VIP exclusive, internal testing, special customers</p></div>',
+        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;">Control group visibility and access permissions.</p><div style="padding: 8px 12px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>🔐 Permission Guide:</b><ul style="margin: 8px 0 0 16px;"><li><b>Off</b> - Public group, visible to all users</li><li><b>On</b> - Exclusive group, only for specified users</li></ul></div><p style="padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; font-size: 13px;"><b>💡 Use Cases:</b> Omnio Pro exclusive, internal testing, special customers</p></div>',
         nextBtn: 'Next'
       },
       groupSubmit: {
@@ -374,7 +374,7 @@ export default {
     activeSubscription: 'Active Subscription',
     noActiveSubscription: 'No active subscription',
     tabTopUp: 'Top Up',
-    tabSubscribe: 'Subscribe',
+    tabSubscribe: 'Omnio Pro',
     noPlans: 'No subscription plans available',
     notAvailable: 'Top-up is currently unavailable',
     confirmSubscription: 'Confirm Subscription',

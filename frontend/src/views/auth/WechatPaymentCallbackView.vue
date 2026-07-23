@@ -1,41 +1,34 @@
 <template>
-  <div class="min-h-screen bg-gray-50 px-4 py-10 dark:bg-dark-900">
-    <div class="mx-auto max-w-2xl">
-      <div class="card p-6">
-        <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
-          {{ callbackTitleText }}
-        </h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          {{ errorMessage || callbackProcessingText }}
-        </p>
+  <AuthLayout>
+    <div class="wechat-callback-state">
+      <div
+        class="wechat-callback-icon"
+        :class="{ 'is-error': Boolean(errorMessage) }"
+      >
+        <Icon :name="errorMessage ? 'exclamationCircle' : 'creditCard'" size="xl" :stroke-width="1.6" />
+      </div>
 
-        <div
-          v-if="!errorMessage"
-          class="mt-6 flex items-center justify-center py-10"
-        >
-          <div
-            class="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"
-          ></div>
-        </div>
+      <div class="wechat-callback-heading">
+        <h2>{{ callbackTitleText }}</h2>
+        <p>{{ errorMessage || callbackProcessingText }}</p>
+      </div>
 
-        <div
-          v-else
-          class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-700 dark:bg-dark-800/80"
-        >
-          <p class="text-sm text-gray-700 dark:text-gray-300">
-            {{ errorMessage }}
-          </p>
-          <button
-            class="btn btn-primary mt-4"
-            type="button"
-            @click="goBackToPayment"
-          >
-            {{ backToPaymentText }}
-          </button>
+      <template v-if="!errorMessage">
+        <div class="wechat-callback-progress">
+          <Icon name="refresh" size="sm" class="animate-spin" :stroke-width="2" />
+          <span>{{ callbackProcessingText }}</span>
         </div>
+        <p class="wechat-callback-note">{{ t('auth.wechatPayment.callbackHint') }}</p>
+      </template>
+
+      <div v-else class="wechat-callback-error" role="alert">
+        <p>{{ errorMessage }}</p>
+        <button class="btn btn-primary" type="button" @click="goBackToPayment">
+          {{ backToPaymentText }}
+        </button>
       </div>
     </div>
-  </div>
+  </AuthLayout>
 </template>
 
 <script setup lang="ts">
@@ -43,6 +36,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores'
+import AuthLayout from '@/components/layout/AuthLayout.vue'
+import Icon from '@/components/icons/Icon.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -148,3 +143,83 @@ onMounted(async () => {
   })
 })
 </script>
+
+<style scoped>
+.wechat-callback-state {
+  display: grid;
+  justify-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 0.25rem 0;
+  text-align: center;
+}
+
+.wechat-callback-icon {
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  place-items: center;
+  border-radius: 1rem;
+  color: var(--omnio-foreground);
+  background: color-mix(in srgb, var(--omnio-foreground) 6%, transparent);
+}
+
+.wechat-callback-icon.is-error {
+  color: #ef4444;
+  background: rgb(239 68 68 / 10%);
+}
+
+.wechat-callback-heading {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.wechat-callback-heading h2 {
+  margin: 0;
+  color: var(--omnio-foreground);
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+.wechat-callback-heading p,
+.wechat-callback-note {
+  margin: 0;
+  color: var(--omnio-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.wechat-callback-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--omnio-foreground);
+  font-size: 0.875rem;
+  font-weight: 580;
+}
+
+.wechat-callback-note {
+  max-width: 23rem;
+  font-size: 0.78rem;
+}
+
+.wechat-callback-error {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid rgb(239 68 68 / 24%);
+  border-radius: 0.75rem;
+  color: #ef4444;
+  background: rgb(239 68 68 / 8%);
+}
+
+.wechat-callback-error p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+</style>

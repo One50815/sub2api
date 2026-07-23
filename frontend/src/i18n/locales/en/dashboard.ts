@@ -810,6 +810,11 @@ export default {
   errors: {
     somethingWentWrong: 'Something went wrong',
     pageNotFound: 'Page not found',
+    pageNotFoundTitle: 'Oops! Page Not Found!',
+    pageNotFoundLineOne: "It seems like the page you're looking for",
+    pageNotFoundLineTwo: 'does not exist or might have been removed.',
+    goBack: 'Go Back',
+    backToHome: 'Back to Home',
     unauthorized: 'Unauthorized',
     forbidden: 'Forbidden',
     serverError: 'Server error',

@@ -132,6 +132,7 @@ type RefundPlan struct {
 	BalanceToDeduct float64
 	SubDaysToDeduct int
 	SubscriptionID  int64
+	MembershipRevoked bool
 }
 
 type RefundResult struct {
@@ -188,6 +189,7 @@ type PaymentService struct {
 	groupRepo                GroupRepository
 	resumeService            *PaymentResumeService
 	affiliateService         *AffiliateService
+	membershipService        *MembershipService
 	notificationEmailService *NotificationEmailService
 }
 
@@ -195,6 +197,24 @@ func NewPaymentService(entClient *dbent.Client, registry *payment.Registry, load
 	svc := &PaymentService{entClient: entClient, registry: registry, loadBalancer: newVisibleMethodLoadBalancer(loadBalancer, configService), redeemService: redeemService, subscriptionSvc: subscriptionSvc, configService: configService, userRepo: userRepo, groupRepo: groupRepo, affiliateService: affiliateService}
 	svc.resumeService = psNewPaymentResumeService(configService)
 	return svc
+}
+
+func (s *PaymentService) SetMembershipService(membershipService *MembershipService) {
+	s.membershipService = membershipService
+}
+
+func (s *PaymentService) ListMembershipOffers(ctx context.Context) ([]MembershipOffer, error) {
+	if s == nil || s.membershipService == nil {
+		return []MembershipOffer{}, nil
+	}
+	return s.membershipService.ListOffers(ctx, true)
+}
+
+func (s *PaymentService) ListPlanMembershipBenefits(ctx context.Context) ([]PlanMembershipBenefit, error) {
+	if s == nil || s.membershipService == nil {
+		return []PlanMembershipBenefit{}, nil
+	}
+	return s.membershipService.ListPlanBenefits(ctx)
 }
 
 func (s *PaymentService) SetNotificationEmailService(notificationEmailService *NotificationEmailService) {

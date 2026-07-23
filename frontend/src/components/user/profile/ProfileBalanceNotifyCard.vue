@@ -1,14 +1,14 @@
 <template>
-  <div class="card">
-    <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
-      <h2 class="text-lg font-medium text-gray-900 dark:text-white">
+  <div class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-dark-700 dark:bg-dark-800">
+    <div class="border-b border-gray-200 px-4 py-3.5 dark:border-dark-700 sm:px-5">
+      <h2 class="text-base font-semibold text-gray-950 dark:text-white">
         {{ t('profile.balanceNotify.title') }}
       </h2>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {{ t('profile.balanceNotify.description') }}
       </p>
     </div>
-    <div class="px-6 py-6 space-y-6">
+    <div class="space-y-5 p-4 sm:p-5">
       <!-- Enable toggle -->
       <div class="flex items-center justify-between">
         <label class="input-label mb-0">{{ t('profile.balanceNotify.enabled') }}</label>
@@ -53,7 +53,7 @@
           <!-- Saved email entries -->
           <div v-if="emailEntries.length > 0" class="space-y-2 mb-3">
             <div v-for="(entry, idx) in emailEntries" :key="idx"
-              class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-dark-700 rounded-lg">
+              class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-2 dark:border-dark-700 dark:bg-dark-900/30">
               <div class="flex items-center gap-2 min-w-0 flex-1">
                 <label class="relative inline-flex items-center cursor-pointer shrink-0">
                   <input type="checkbox" :checked="!entry.disabled" @change="handleEmailToggle(entry)" class="sr-only peer" />

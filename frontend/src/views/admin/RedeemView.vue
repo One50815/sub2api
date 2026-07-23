@@ -273,16 +273,14 @@
     />
 
     <!-- Generate Codes Dialog -->
-    <Teleport to="body">
-      <div v-if="showGenerateDialog" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div class="fixed inset-0 bg-black/50" @click="showGenerateDialog = false"></div>
-        <div
-          class="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-dark-800"
-        >
-          <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            {{ t('admin.redeem.generateCodesTitle') }}
-          </h2>
-          <form @submit.prevent="handleGenerateCodes" class="space-y-4">
+    <BaseDialog
+      :show="showGenerateDialog"
+      :title="t('admin.redeem.generateCodesTitle')"
+      width="normal"
+      :close-on-click-outside="true"
+      @close="showGenerateDialog = false"
+    >
+          <form id="generate-redeem-codes-form" class="space-y-4" @submit.prevent="handleGenerateCodes">
             <div>
               <label class="input-label">{{ t('admin.redeem.codeType') }}</label>
               <Select v-model="generateForm.type" :options="typeOptions" />
@@ -306,8 +304,9 @@
               />
             </div>
             <!-- 邀请码类型：显示提示信息 -->
-            <div v-if="generateForm.type === 'invitation'" class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-              <p class="text-sm text-blue-700 dark:text-blue-300">
+            <div v-if="generateForm.type === 'invitation'" class="dialog-note">
+              <Icon name="infoCircle" size="sm" aria-hidden="true" />
+              <p>
                 {{ t('admin.redeem.invitationHint') }}
               </p>
             </div>
@@ -365,10 +364,10 @@
                   type="button"
                   @click="generateForm.expiry_option = option.value"
                   :class="[
-                    'rounded-lg border px-3 py-2 text-sm transition-colors',
+                    'expiry-option',
                     generateForm.expiry_option === option.value
-                      ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/20 dark:text-primary-300'
-                      : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-dark-600 dark:text-gray-300 dark:hover:bg-dark-700'
+                      ? 'expiry-option-active'
+                      : ''
                   ]"
                 >
                   {{ option.label }}
@@ -396,37 +395,43 @@
                 class="input"
               />
             </div>
-            <div class="flex justify-end gap-3 pt-2">
-              <button type="button" @click="showGenerateDialog = false" class="btn btn-secondary">
-                {{ t('common.cancel') }}
-              </button>
-              <button type="submit" :disabled="generating" class="btn btn-primary">
-                {{ generating ? t('admin.redeem.generating') : t('admin.redeem.generate') }}
-              </button>
-            </div>
           </form>
+
+      <template #footer>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-secondary" @click="showGenerateDialog = false">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            type="submit"
+            form="generate-redeem-codes-form"
+            :disabled="generating"
+            class="btn btn-primary"
+          >
+            {{ generating ? t('admin.redeem.generating') : t('admin.redeem.generate') }}
+          </button>
         </div>
-      </div>
-    </Teleport>
+      </template>
+    </BaseDialog>
 
     <!-- Batch Update Dialog -->
-    <Teleport to="body">
-      <div
-        v-if="showBatchUpdateDialog"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      >
-        <div class="fixed inset-0 bg-black/50" @click="closeBatchUpdateDialog"></div>
-        <div
-          class="relative z-10 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-dark-800"
-        >
-          <h2 class="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
-            {{ t('admin.redeem.batchUpdateTitle') }}
-          </h2>
-          <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+    <BaseDialog
+      :show="showBatchUpdateDialog"
+      :title="t('admin.redeem.batchUpdateTitle')"
+      width="normal"
+      :close-on-click-outside="true"
+      @close="closeBatchUpdateDialog"
+    >
+          <p class="dialog-subtitle">
             {{ t('admin.redeem.selectedCount', { count: selectedCount }) }}
           </p>
 
-          <form data-test="batch-update-form" class="space-y-4" @submit.prevent="handleBatchUpdate">
+          <form
+            id="batch-update-redeem-form"
+            data-test="batch-update-form"
+            class="space-y-4"
+            @submit.prevent="handleBatchUpdate"
+          >
             <div class="space-y-2">
               <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <input
@@ -502,108 +507,72 @@
               />
             </div>
 
-            <div class="flex justify-end gap-3 pt-2">
-              <button type="button" @click="closeBatchUpdateDialog" class="btn btn-secondary">
-                {{ t('common.cancel') }}
-              </button>
-              <button
-                data-test="batch-update-submit"
-                type="submit"
-                :disabled="batchUpdating"
-                class="btn btn-primary"
-              >
-                {{ batchUpdating ? t('common.submitting') : t('admin.redeem.batchUpdate') }}
-              </button>
-            </div>
           </form>
+
+      <template #footer>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-secondary" @click="closeBatchUpdateDialog">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            data-test="batch-update-submit"
+            type="submit"
+            form="batch-update-redeem-form"
+            :disabled="batchUpdating"
+            class="btn btn-primary"
+          >
+            {{ batchUpdating ? t('common.submitting') : t('admin.redeem.batchUpdate') }}
+          </button>
         </div>
-      </div>
-    </Teleport>
+      </template>
+    </BaseDialog>
 
     <!-- Generated Codes Result Dialog -->
-    <Teleport to="body">
-      <div v-if="showResultDialog" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/50" @click="closeResultDialog"></div>
-        <div class="relative z-10 w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-dark-800">
-          <!-- Header -->
-          <div
-            class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-dark-600"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30"
-              >
-                <svg
-                  class="h-5 w-5 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h2 class="text-base font-semibold text-gray-900 dark:text-white">
-                  {{ t('admin.redeem.generatedSuccessfully') }}
-                </h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('admin.redeem.codesCreated', { count: generatedCodes.length }) }}
-                </p>
-              </div>
-            </div>
-            <button
-              @click="closeResultDialog"
-              class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-700 dark:hover:text-gray-300"
-            >
-              <Icon name="x" size="md" :stroke-width="2" />
-            </button>
-          </div>
-          <!-- Content -->
-          <div class="p-5">
-            <div class="relative">
-              <textarea
-                readonly
-                :value="generatedCodesText"
-                :style="{ height: textareaHeight }"
-                class="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-sm text-gray-800 focus:outline-none dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200"
-              ></textarea>
-            </div>
-          </div>
-          <!-- Footer -->
-          <div
-            class="flex justify-end gap-2 rounded-b-xl border-t border-gray-200 bg-gray-50 px-5 py-4 dark:border-dark-600 dark:bg-dark-700/50"
-          >
-            <button
-              @click="copyGeneratedCodes"
-              :class="[
-                'btn flex items-center gap-2 transition-all',
-                copiedAll ? 'btn-success' : 'btn-secondary'
-              ]"
-            >
-              <Icon v-if="!copiedAll" name="copy" size="sm" :stroke-width="2" />
-              <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              {{ copiedAll ? t('admin.redeem.copied') : t('admin.redeem.copyAll') }}
-            </button>
-            <button @click="downloadGeneratedCodes" class="btn btn-primary flex items-center gap-2">
-              <Icon name="download" size="sm" :stroke-width="2" />
-              {{ t('admin.redeem.download') }}
-            </button>
-          </div>
+    <BaseDialog
+      :show="showResultDialog"
+      :title="t('admin.redeem.generatedSuccessfully')"
+      width="normal"
+      :close-on-click-outside="true"
+      @close="closeResultDialog"
+    >
+      <div class="result-content">
+        <div class="result-summary">
+          <span class="result-icon" aria-hidden="true">
+            <Icon name="checkCircle" size="md" />
+          </span>
+          <p>{{ t('admin.redeem.codesCreated', { count: generatedCodes.length }) }}</p>
         </div>
+
+        <textarea
+          readonly
+          :value="generatedCodesText"
+          :style="{ height: textareaHeight }"
+          class="generated-codes"
+          :aria-label="t('admin.redeem.generatedSuccessfully')"
+        ></textarea>
       </div>
-    </Teleport>
+
+      <template #footer>
+        <div class="dialog-actions result-actions">
+          <button
+            type="button"
+            class="btn btn-secondary flex items-center gap-2"
+            @click="copyGeneratedCodes"
+          >
+            <Icon :name="copiedAll ? 'check' : 'copy'" size="sm" :stroke-width="2" />
+            {{ copiedAll ? t('admin.redeem.copied') : t('admin.redeem.copyAll') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary flex items-center gap-2"
+            @click="downloadGeneratedCodes"
+          >
+            <Icon name="download" size="sm" :stroke-width="2" />
+            {{ t('admin.redeem.download') }}
+          </button>
+        </div>
+      </template>
+    </BaseDialog>
   </AppLayout>
 </template>
 
@@ -629,6 +598,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import Pagination from '@/components/common/Pagination.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
@@ -1187,3 +1157,121 @@ onUnmounted(() => {
   abortController?.abort()
 })
 </script>
+
+<style scoped>
+.dialog-note,
+.result-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--omnio-primary, #3b82f6) 16%, var(--omnio-border, #e5e7eb));
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  color: var(--omnio-muted, #6b7280);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 4%, var(--omnio-surface, #fff));
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.dialog-note :deep(svg) {
+  flex: 0 0 auto;
+  color: var(--omnio-primary, #3b82f6);
+}
+
+.dialog-subtitle {
+  margin-bottom: 1rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.expiry-option {
+  min-height: 2.25rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.625rem;
+  color: var(--omnio-foreground, #111827);
+  background: var(--omnio-surface, #fff);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.expiry-option:hover {
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 4%, var(--omnio-surface, #fff));
+}
+
+.expiry-option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 20%, transparent);
+}
+
+.expiry-option-active {
+  border-color: color-mix(in srgb, var(--omnio-primary, #3b82f6) 58%, var(--omnio-border, #e5e7eb));
+  color: var(--omnio-primary-strong, #2563eb);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 6%, var(--omnio-surface, #fff));
+}
+
+.result-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.result-summary {
+  border-color: color-mix(in srgb, #059669 18%, var(--omnio-border, #e5e7eb));
+  background: color-mix(in srgb, #10b981 4%, var(--omnio-surface, #fff));
+}
+
+.result-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: #059669;
+}
+
+.generated-codes {
+  width: 100%;
+  resize: none;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  color: var(--omnio-foreground, #111827);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 2.5%, var(--omnio-surface, #fff));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  outline: none;
+}
+
+.generated-codes:focus {
+  border-color: var(--omnio-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--omnio-primary, #3b82f6) 18%, transparent);
+}
+
+.dialog-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 520px) {
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-actions .btn {
+    width: 100%;
+  }
+
+  .result-actions {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expiry-option {
+    transition-duration: 1ms;
+  }
+}
+</style>

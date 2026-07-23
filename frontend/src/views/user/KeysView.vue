@@ -147,7 +147,11 @@
                   :platform="row.group.platform"
                   :subscription-type="row.group.subscription_type"
                   :rate-multiplier="row.group.rate_multiplier"
-                  :user-rate-multiplier="userGroupRates[row.group.id]"
+                  :personal-rate-multiplier="entitledGroup(row.group.id)?.personal_rate_multiplier ?? null"
+                  :pro-rate-multiplier="entitledGroup(row.group.id)?.pro_rate_multiplier ?? null"
+                  :effective-rate-multiplier="entitledGroup(row.group.id)?.effective_rate_multiplier ?? null"
+                  :pro-only="entitledGroup(row.group.id)?.pro_only ?? false"
+                  :pro-level-name="entitledGroup(row.group.id)?.pro_level_name || ''"
                   :peak-rate-enabled="row.group.peak_rate_enabled"
                   :peak-start="row.group.peak_start"
                   :peak-end="row.group.peak_end"
@@ -481,7 +485,11 @@
                 :platform="(option as unknown as GroupOption).platform"
                 :subscription-type="(option as unknown as GroupOption).subscriptionType"
                 :rate-multiplier="(option as unknown as GroupOption).rate"
-                :user-rate-multiplier="(option as unknown as GroupOption).userRate"
+                :personal-rate-multiplier="(option as unknown as GroupOption).personalRate"
+                :pro-rate-multiplier="(option as unknown as GroupOption).proRate"
+                :effective-rate-multiplier="(option as unknown as GroupOption).effectiveRate"
+                :pro-only="(option as unknown as GroupOption).proOnly"
+                :pro-level-name="(option as unknown as GroupOption).proLevelName"
                 :peak-rate-enabled="(option as unknown as GroupOption).peakRateEnabled"
                 :peak-start="(option as unknown as GroupOption).peakStart"
                 :peak-end="(option as unknown as GroupOption).peakEnd"
@@ -495,7 +503,11 @@
                 :platform="(option as unknown as GroupOption).platform"
                 :subscription-type="(option as unknown as GroupOption).subscriptionType"
                 :rate-multiplier="(option as unknown as GroupOption).rate"
-                :user-rate-multiplier="(option as unknown as GroupOption).userRate"
+                :personal-rate-multiplier="(option as unknown as GroupOption).personalRate"
+                :pro-rate-multiplier="(option as unknown as GroupOption).proRate"
+                :effective-rate-multiplier="(option as unknown as GroupOption).effectiveRate"
+                :pro-only="(option as unknown as GroupOption).proOnly"
+                :pro-level-name="(option as unknown as GroupOption).proLevelName"
                 :peak-rate-enabled="(option as unknown as GroupOption).peakRateEnabled"
                 :peak-start="(option as unknown as GroupOption).peakStart"
                 :peak-end="(option as unknown as GroupOption).peakEnd"
@@ -1094,7 +1106,11 @@
               :platform="option.platform"
               :subscription-type="option.subscriptionType"
               :rate-multiplier="option.rate"
-              :user-rate-multiplier="option.userRate"
+              :personal-rate-multiplier="option.personalRate"
+              :pro-rate-multiplier="option.proRate"
+              :effective-rate-multiplier="option.effectiveRate"
+              :pro-only="option.proOnly"
+              :pro-level-name="option.proLevelName"
               :peak-rate-enabled="option.peakRateEnabled"
               :peak-start="option.peakStart"
               :peak-end="option.peakEnd"
@@ -1162,7 +1178,11 @@ interface GroupOption {
   label: string
   description: string | null
   rate: number
-  userRate: number | null
+  personalRate: number | null
+  proRate: number | null
+  effectiveRate: number
+  proOnly: boolean
+  proLevelName: string
   peakRateEnabled: boolean
   peakStart: string
   peakEnd: string
@@ -1276,7 +1296,6 @@ const submitting = ref(false)
 const now = ref(new Date())
 let resetTimer: ReturnType<typeof setInterval> | null = null
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
-const userGroupRates = ref<Record<number, number>>({})
 
 const pagination = ref({
   page: 1,
@@ -1414,7 +1433,11 @@ const groupOptions = computed(() =>
     label: group.name,
     description: group.description,
     rate: group.rate_multiplier,
-    userRate: userGroupRates.value[group.id] ?? null,
+    personalRate: group.personal_rate_multiplier ?? null,
+    proRate: group.pro_rate_multiplier ?? null,
+    effectiveRate: group.effective_rate_multiplier ?? group.rate_multiplier,
+    proOnly: group.pro_only ?? false,
+    proLevelName: group.pro_level_name || '',
     peakRateEnabled: group.peak_rate_enabled,
     peakStart: group.peak_start,
     peakEnd: group.peak_end,
@@ -1423,6 +1446,12 @@ const groupOptions = computed(() =>
     platform: group.platform
   }))
 )
+
+const groupByID = computed(() => new Map(groups.value.map((group) => [group.id, group])))
+
+function entitledGroup(groupID: number): Group | undefined {
+  return groupByID.value.get(groupID)
+}
 
 // Group dropdown search
 const groupSearchQuery = ref('')
@@ -1510,14 +1539,6 @@ const loadGroups = async () => {
     groups.value = await userGroupsAPI.getAvailable()
   } catch (error) {
     console.error('Failed to load groups:', error)
-  }
-}
-
-const loadUserGroupRates = async () => {
-  try {
-    userGroupRates.value = await userGroupsAPI.getUserGroupRates()
-  } catch (error) {
-    console.error('Failed to load user group rates:', error)
   }
 }
 
@@ -1954,7 +1975,6 @@ onMounted(() => {
   loadSavedColumns()
   loadApiKeys()
   loadGroups()
-  loadUserGroupRates()
   loadPublicSettings()
   document.addEventListener('click', closeGroupSelector)
   resetTimer = setInterval(() => { now.value = new Date() }, 60000)

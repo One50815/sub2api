@@ -1,8 +1,13 @@
 <template>
   <div class="table-page-layout" :class="{ 'mobile-mode': isMobile }">
-    <!-- 固定区域：操作按钮 -->
-    <div v-if="$slots.actions" class="layout-section-fixed">
-      <slot name="actions" />
+    <!-- Reference-console page heading and primary actions -->
+    <div v-if="pageTitle || $slots.actions" class="table-page-heading layout-section-fixed">
+      <div class="min-w-0">
+        <h1 v-if="pageTitle" class="table-page-title">{{ pageTitle }}</h1>
+      </div>
+      <div v-if="$slots.actions" class="table-page-actions">
+        <slot name="actions" />
+      </div>
     </div>
 
     <!-- 固定区域：搜索和过滤器 -->
@@ -25,7 +30,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+
+const route = useRoute()
+const { t } = useI18n()
+
+const pageTitle = computed(() => {
+  const titleKey = route.meta.titleKey as string | undefined
+  return titleKey ? t(titleKey) : String(route.meta.title || '')
+})
 
 const isMobile = ref(false)
 
@@ -52,6 +67,18 @@ onUnmounted(() => {
 
 .layout-section-fixed {
   @apply flex-shrink-0;
+}
+
+.table-page-heading {
+  @apply flex items-start justify-between gap-4;
+}
+
+.table-page-title {
+  @apply truncate text-base font-bold tracking-normal text-gray-900 dark:text-white sm:text-lg;
+}
+
+.table-page-actions {
+  @apply flex flex-shrink-0 items-center justify-end gap-2;
 }
 
 .layout-section-scrollable {

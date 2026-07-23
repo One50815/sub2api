@@ -47,6 +47,7 @@ type SubscriptionService struct {
 	userSubRepo         UserSubscriptionRepository
 	billingCacheService *BillingCacheService
 	entClient           *dbent.Client
+	membershipSvc       *MembershipService
 
 	// L1 缓存：加速中间件热路径的订阅查询
 	subCacheL1     *ristretto.Cache
@@ -55,6 +56,10 @@ type SubscriptionService struct {
 	subCacheJitter int // 抖动百分比
 
 	maintenanceQueue *SubscriptionMaintenanceQueue
+}
+
+func (s *SubscriptionService) SetMembershipService(membershipSvc *MembershipService) {
+	s.membershipSvc = membershipSvc
 }
 
 // NewSubscriptionService 创建订阅服务
@@ -712,7 +717,11 @@ func (s *SubscriptionService) ExtendSubscription(ctx context.Context, subscripti
 
 // GetByID 根据ID获取订阅
 func (s *SubscriptionService) GetByID(ctx context.Context, id int64) (*UserSubscription, error) {
-	return s.userSubRepo.GetByID(ctx, id)
+	sub, err := s.userSubRepo.GetByID(ctx, id)
+	if err == nil {
+		s.attachEntitlement(ctx, sub)
+	}
+	return sub, err
 }
 
 // GetActiveSubscription 获取用户对特定分组的有效订阅
@@ -737,6 +746,7 @@ func (s *SubscriptionService) GetActiveSubscription(ctx context.Context, userID,
 		if err != nil {
 			return nil, err // 直接透传 repo 已翻译的错误（NotFound → ErrSubscriptionNotFound，其他错误原样返回）
 		}
+		s.attachEntitlement(ctx, sub)
 		// 写入 L1 缓存
 		if s.subCacheL1 != nil {
 			_ = s.subCacheL1.SetWithTTL(key, sub, 1, s.jitteredTTL(s.subCacheTTL))
@@ -763,6 +773,7 @@ func (s *SubscriptionService) ListUserSubscriptions(ctx context.Context, userID 
 	}
 	normalizeExpiredWindows(subs)
 	normalizeSubscriptionStatus(subs)
+	s.attachEntitlements(ctx, subs)
 	return subs, nil
 }
 
@@ -773,6 +784,7 @@ func (s *SubscriptionService) ListActiveUserSubscriptions(ctx context.Context, u
 		return nil, err
 	}
 	normalizeExpiredWindows(subs)
+	s.attachEntitlements(ctx, subs)
 	return subs, nil
 }
 
@@ -785,6 +797,7 @@ func (s *SubscriptionService) ListGroupSubscriptions(ctx context.Context, groupI
 	}
 	normalizeExpiredWindows(subs)
 	normalizeSubscriptionStatus(subs)
+	s.attachEntitlements(ctx, subs)
 	return subs, pag, nil
 }
 
@@ -797,7 +810,24 @@ func (s *SubscriptionService) List(ctx context.Context, page, pageSize int, user
 	}
 	normalizeExpiredWindows(subs)
 	normalizeSubscriptionStatus(subs)
+	s.attachEntitlements(ctx, subs)
 	return subs, pag, nil
+}
+
+func (s *SubscriptionService) attachEntitlements(ctx context.Context, subs []UserSubscription) {
+	for i := range subs {
+		s.attachEntitlement(ctx, &subs[i])
+	}
+}
+
+func (s *SubscriptionService) attachEntitlement(ctx context.Context, sub *UserSubscription) {
+	if s == nil || s.membershipSvc == nil || sub == nil {
+		return
+	}
+	entitlement, err := s.membershipSvc.GetSubscriptionEntitlement(ctx, sub.ID)
+	if err == nil {
+		sub.Entitlement = entitlement
+	}
 }
 
 // normalizeExpiredWindows 将已过期窗口的数据清零（仅影响返回数据，不影响数据库）
@@ -949,6 +979,7 @@ func (s *SubscriptionService) EnsureWindowMaintenance(ctx context.Context, sub *
 		return nil, err
 	}
 	s.InvalidateSubCacheSync(sub.UserID, sub.GroupID)
+	s.attachEntitlement(ctx, refreshed)
 	return refreshed, nil
 }
 

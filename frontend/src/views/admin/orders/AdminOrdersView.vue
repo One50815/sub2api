@@ -1,6 +1,10 @@
 <template>
   <AppLayout>
     <div class="space-y-4">
+      <div class="page-header">
+        <h1 class="page-title">{{ t('nav.orderManagement') }}</h1>
+      </div>
+
       <!-- Filters -->
       <div class="card p-4">
         <div class="flex flex-wrap items-center gap-3">

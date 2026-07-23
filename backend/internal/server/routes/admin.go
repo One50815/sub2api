@@ -42,6 +42,9 @@ func RegisterAdminRoutes(
 		// 公告管理
 		registerAnnouncementRoutes(admin, h)
 
+		// 工单管理（管理员入口不受用户中心开关影响）
+		registerTicketRoutes(admin, h)
+
 		// OpenAI OAuth
 		registerOpenAIOAuthRoutes(admin, h)
 
@@ -80,6 +83,7 @@ func RegisterAdminRoutes(
 
 		// 订阅管理
 		registerSubscriptionRoutes(admin, h)
+		registerMembershipRoutes(admin, h)
 
 		// 使用记录管理
 		registerUsageRoutes(admin, h)
@@ -410,6 +414,24 @@ func registerAnnouncementRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	}
 }
 
+func registerTicketRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	tickets := admin.Group("/tickets")
+	read := middleware.RequireTicketPermission(service.TicketPermissionRead)
+	reply := middleware.RequireTicketPermission(service.TicketPermissionReply)
+	manage := middleware.RequireTicketPermission(service.TicketPermissionManage)
+	{
+		tickets.GET("/config", read, h.Admin.Ticket.GetConfig)
+		tickets.PUT("/config", manage, h.Admin.Ticket.UpdateConfig)
+		tickets.GET("", read, h.Admin.Ticket.List)
+		tickets.GET("/summary", read, h.Admin.Ticket.Summary)
+		tickets.GET("/assignees", read, h.Admin.Ticket.Assignees)
+		tickets.GET("/:id", read, h.Admin.Ticket.Get)
+		tickets.POST("/:id/read", read, h.Admin.Ticket.MarkRead)
+		tickets.POST("/:id/messages", reply, h.Admin.Ticket.Reply)
+		tickets.PATCH("/:id", manage, h.Admin.Ticket.Update)
+	}
+}
+
 func registerOpenAIOAuthRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	openai := admin.Group("/openai")
 	{
@@ -628,6 +650,28 @@ func registerSubscriptionRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 
 	// 用户下的订阅列表
 	admin.GET("/users/:id/subscriptions", h.Admin.Subscription.ListByUser)
+}
+
+func registerMembershipRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	membership := admin.Group("/membership")
+	{
+		membership.GET("/catalog", h.Admin.Membership.Catalog)
+		membership.GET("/group-settings/:groupId", h.Admin.Membership.GetGroupSetting)
+		membership.PUT("/group-settings/:groupId", h.Admin.Membership.UpsertGroupSetting)
+		membership.POST("/levels", h.Admin.Membership.UpsertLevel)
+		membership.PUT("/levels/:id", h.Admin.Membership.UpsertLevel)
+		membership.DELETE("/levels/:id", h.Admin.Membership.DeleteLevel)
+		membership.POST("/offers", h.Admin.Membership.UpsertOffer)
+		membership.PUT("/offers/:id", h.Admin.Membership.UpsertOffer)
+		membership.DELETE("/offers/:id", h.Admin.Membership.DeleteOffer)
+		membership.PUT("/benefits", h.Admin.Membership.UpsertBenefit)
+		membership.DELETE("/benefits/:levelId/:groupId", h.Admin.Membership.DeleteBenefit)
+		membership.PUT("/plan-benefits", h.Admin.Membership.SetPlanBenefit)
+		membership.DELETE("/plan-benefits/:planId", h.Admin.Membership.DeletePlanBenefit)
+		membership.POST("/grants", h.Admin.Membership.Grant)
+		membership.POST("/grants/:id/revoke", h.Admin.Membership.RevokeGrant)
+		membership.GET("/audit-logs", h.Admin.Membership.AuditLogs)
+	}
 }
 
 func registerUsageRoutes(admin *gin.RouterGroup, h *handler.Handlers) {

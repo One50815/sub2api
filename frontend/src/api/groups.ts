@@ -6,6 +6,16 @@
 import { apiClient } from './client'
 import type { Group } from '@/types'
 
+export interface UserGroupEntitlement {
+  group_id: number
+  personal_rate_multiplier?: number | null
+  pro_rate_multiplier?: number | null
+  effective_rate_multiplier: number
+  pro_only: boolean
+  pro_access: boolean
+  pro_level_name?: string
+}
+
 /**
  * Get available groups that the current user can bind to API keys
  * This returns groups based on user's permissions:
@@ -27,9 +37,16 @@ export async function getUserGroupRates(): Promise<Record<number, number>> {
   return data || {}
 }
 
+/** Get the current user's manual, Omnio Pro, and final group multipliers. */
+export async function getUserGroupEntitlements(): Promise<Record<number, UserGroupEntitlement>> {
+  const { data } = await apiClient.get<Record<number, UserGroupEntitlement> | null>('/groups/entitlements')
+  return data || {}
+}
+
 export const userGroupsAPI = {
   getAvailable,
-  getUserGroupRates
+  getUserGroupRates,
+  getUserGroupEntitlements
 }
 
 export default userGroupsAPI

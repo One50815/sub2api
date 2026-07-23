@@ -21,6 +21,7 @@ type UsageBillingCommand struct {
 
 	UserID              int64
 	AccountID           int64
+	GroupID             int64
 	SubscriptionID      *int64
 	AccountType         string
 	Model               string
@@ -117,6 +118,10 @@ type UsageBillingApplyResult struct {
 	NewBalance           *float64           // post-deduction balance (nil = no balance deduction)
 	BalanceOverdrafted   bool               // true when the sufficient-balance guard missed and debt was still recorded
 	QuotaState           *AccountQuotaState // post-increment quota state (nil = no quota increment)
+	WalletCost           *float64           // actual wallet deduction; nil means legacy/full BalanceCost behavior
+	OmnioProFreeCost     float64            // request cost covered by active Omnio Pro free quota
+	OmnioProDailyUsed    float64            // post-allocation daily free usage
+	OmnioProMonthlyUsed  float64            // post-allocation monthly free usage
 }
 
 // BatchImageBalanceHoldCommand describes an idempotent balance hold operation.

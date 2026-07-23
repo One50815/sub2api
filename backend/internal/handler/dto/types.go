@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
+	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
 type User struct {
@@ -87,13 +88,19 @@ type APIKey struct {
 }
 
 type Group struct {
-	ID             int64   `json:"id"`
-	Name           string  `json:"name"`
-	Description    string  `json:"description"`
-	Platform       string  `json:"platform"`
-	RateMultiplier float64 `json:"rate_multiplier"`
-	IsExclusive    bool    `json:"is_exclusive"`
-	Status         string  `json:"status"`
+	ID                      int64    `json:"id"`
+	Name                    string   `json:"name"`
+	Description             string   `json:"description"`
+	Platform                string   `json:"platform"`
+	RateMultiplier          float64  `json:"rate_multiplier"`
+	PersonalRateMultiplier  *float64 `json:"personal_rate_multiplier,omitempty"`
+	ProRateMultiplier       *float64 `json:"pro_rate_multiplier,omitempty"`
+	EffectiveRateMultiplier *float64 `json:"effective_rate_multiplier,omitempty"`
+	ProOnly                 bool     `json:"pro_only,omitempty"`
+	ProAccess               bool     `json:"pro_access,omitempty"`
+	ProLevelName            string   `json:"pro_level_name,omitempty"`
+	IsExclusive             bool     `json:"is_exclusive"`
+	Status                  string   `json:"status"`
 
 	SubscriptionType string   `json:"subscription_type"`
 	DailyLimitUSD    *float64 `json:"daily_limit_usd"`
@@ -622,6 +629,8 @@ type UserSubscription struct {
 
 	User  *User  `json:"user,omitempty"`
 	Group *Group `json:"group,omitempty"`
+
+	Entitlement *service.SubscriptionEntitlement `json:"entitlement,omitempty"`
 }
 
 // AdminUserSubscription 是管理员接口使用的订阅 DTO（包含分配信息/备注等字段）。

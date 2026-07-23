@@ -1,18 +1,17 @@
 <template>
   <div class="empty-state">
     <!-- Icon -->
-    <div
-      class="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-100 dark:bg-dark-800"
-    >
+    <div class="empty-state-media">
       <slot name="icon">
-        <component v-if="icon" :is="icon" class="empty-state-icon h-10 w-10" aria-hidden="true" />
+        <component v-if="icon" :is="icon" class="empty-state-icon" aria-hidden="true" />
         <svg
           v-else
-          class="empty-state-icon h-10 w-10"
+          class="empty-state-icon"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          stroke-width="1.5"
+          stroke-width="1.75"
+          aria-hidden="true"
         >
           <path
             stroke-linecap="round"
@@ -29,12 +28,12 @@
     </h3>
 
     <!-- Description -->
-    <p class="empty-state-description">
+    <p v-if="description" class="empty-state-description">
       {{ description }}
     </p>
 
     <!-- Action -->
-    <div v-if="actionText || $slots.action" class="mt-6">
+    <div v-if="actionText || $slots.action" class="empty-state-action">
       <slot name="action">
         <component
           :is="actionTo ? 'RouterLink' : 'button'"
@@ -78,3 +77,58 @@ const displayTitle = computed(() => props.title || t('common.noData'))
 
 defineEmits(['action'])
 </script>
+
+<style scoped>
+.empty-state {
+  min-height: 18.75rem;
+  padding: 2rem 1.5rem;
+  gap: 0;
+}
+
+.empty-state-media {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  border-radius: 0.55rem;
+  color: var(--omnio-muted, #6b7280);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 5%, transparent);
+}
+
+.empty-state-media :deep(svg),
+.empty-state-icon {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  margin: 0 !important;
+  color: currentColor !important;
+}
+
+.empty-state-title {
+  margin: 0 !important;
+  color: var(--omnio-foreground, #111827) !important;
+  font-size: 0.9rem !important;
+  line-height: 1.35 !important;
+  font-weight: 560 !important;
+}
+
+.empty-state-description {
+  max-width: 24rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  text-wrap: balance;
+}
+
+.empty-state-action {
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .empty-state {
+    min-height: 15rem;
+    padding: 1.5rem 1rem;
+  }
+}
+</style>

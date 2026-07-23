@@ -20,7 +20,11 @@ func NewUserGroupRateRepository(sqlDB *sql.DB) service.UserGroupRateRepository {
 
 // GetByUserID 获取用户所有专属分组 rate_multiplier（仅返回非 NULL 的条目）
 func (r *userGroupRateRepository) GetByUserID(ctx context.Context, userID int64) (map[int64]float64, error) {
-	query := `SELECT group_id, rate_multiplier FROM user_group_rate_multipliers WHERE user_id = $1 AND rate_multiplier IS NOT NULL`
+	query := `
+		SELECT group_id, rate_multiplier
+		FROM user_group_rate_multipliers
+		WHERE user_id=$1 AND rate_multiplier IS NOT NULL
+		ORDER BY group_id`
 	rows, err := r.sql.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -69,7 +73,8 @@ func (r *userGroupRateRepository) GetByUserIDs(ctx context.Context, userIDs []in
 	rows, err := r.sql.QueryContext(ctx, `
 		SELECT user_id, group_id, rate_multiplier
 		FROM user_group_rate_multipliers
-		WHERE user_id = ANY($1) AND rate_multiplier IS NOT NULL
+		WHERE user_id=ANY($1) AND rate_multiplier IS NOT NULL
+		ORDER BY user_id, group_id
 	`, pq.Array(uniqueIDs))
 	if err != nil {
 		return nil, err
@@ -138,14 +143,35 @@ func (r *userGroupRateRepository) GetByUserAndGroup(ctx context.Context, userID,
 	query := `SELECT rate_multiplier FROM user_group_rate_multipliers WHERE user_id = $1 AND group_id = $2`
 	var rate sql.NullFloat64
 	err := scanSingleRow(ctx, r.sql, query, []any{userID, groupID}, &rate)
-	if err == sql.ErrNoRows {
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	if rate.Valid {
+		v := rate.Float64
+		return &v, nil
+	}
+	query = `
+		WITH effective_level AS (
+			SELECT ml.id
+			FROM user_membership_grants mg
+			JOIN membership_levels ml ON ml.id=mg.level_id AND ml.active=TRUE
+			WHERE mg.user_id=$1 AND mg.status='active'
+			  AND mg.starts_at<=NOW() AND mg.expires_at>NOW()
+			ORDER BY ml.rank DESC, mg.expires_at DESC, ml.id DESC
+			LIMIT 1
+		)
+		SELECT CASE WHEN s.group_id IS NOT NULL THEN s.rate_multiplier ELSE b.rate_multiplier END
+		FROM effective_level e
+		LEFT JOIN omnio_pro_group_settings s ON s.group_id=$2
+		LEFT JOIN membership_level_group_benefits b ON b.level_id=e.id AND b.group_id=$2
+		WHERE CASE WHEN s.group_id IS NOT NULL THEN s.rate_multiplier ELSE b.rate_multiplier END IS NOT NULL`
+	rate = sql.NullFloat64{}
+	err = scanSingleRow(ctx, r.sql, query, []any{userID, groupID}, &rate)
+	if err == sql.ErrNoRows || !rate.Valid {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
-	}
-	if !rate.Valid {
-		return nil, nil
 	}
 	v := rate.Float64
 	return &v, nil
@@ -156,14 +182,28 @@ func (r *userGroupRateRepository) GetRPMOverrideByUserAndGroup(ctx context.Conte
 	query := `SELECT rpm_override FROM user_group_rate_multipliers WHERE user_id = $1 AND group_id = $2`
 	var rpm sql.NullInt32
 	err := scanSingleRow(ctx, r.sql, query, []any{userID, groupID}, &rpm)
-	if err == sql.ErrNoRows {
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	if rpm.Valid {
+		v := int(rpm.Int32)
+		return &v, nil
+	}
+	query = `
+		SELECT b.rpm_limit
+		FROM user_membership_grants mg
+		JOIN membership_levels ml ON ml.id=mg.level_id AND ml.active=TRUE
+		JOIN membership_level_group_benefits b ON b.level_id=ml.id AND b.group_id=$2
+		WHERE mg.user_id=$1 AND mg.status='active' AND mg.starts_at<=NOW() AND mg.expires_at>NOW()
+		  AND b.rpm_limit IS NOT NULL
+		ORDER BY ml.rank DESC, mg.expires_at DESC LIMIT 1`
+	rpm = sql.NullInt32{}
+	err = scanSingleRow(ctx, r.sql, query, []any{userID, groupID}, &rpm)
+	if err == sql.ErrNoRows || !rpm.Valid {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
-	}
-	if !rpm.Valid {
-		return nil, nil
 	}
 	v := int(rpm.Int32)
 	return &v, nil

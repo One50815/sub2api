@@ -16,3 +16,12 @@ export function formatMultiplier(val: number): string {
   if (val >= 0.0001) return val.toFixed(4)
   return val.toPrecision(2)
 }
+
+/**
+ * Compact multiplier for group selectors. It removes floating-point noise and
+ * trailing zeroes while retaining up to six meaningful decimal places.
+ */
+export function formatCompactMultiplier(val: number): string {
+  if (!Number.isFinite(val)) return '1'
+  return Number(val.toFixed(6)).toString()
+}

@@ -1,90 +1,92 @@
 <template>
-  <div class="fixed inset-0 z-50 overflow-y-auto" @click.self="$emit('close')">
-    <div class="flex min-h-full items-center justify-center p-4">
-      <div class="fixed inset-0 bg-black/50 transition-opacity" @click="$emit('close')"></div>
-
-      <div class="relative w-full max-w-md transform rounded-xl bg-white p-6 shadow-xl transition-all dark:bg-dark-800">
-        <!-- Header -->
-        <div class="mb-6">
-          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-            <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-          </div>
-          <h3 class="mt-4 text-center text-xl font-semibold text-gray-900 dark:text-white">
-            {{ t('profile.totp.disableTitle') }}
-          </h3>
-          <p class="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
-            {{ t('profile.totp.disableWarning') }}
-          </p>
-        </div>
-
-        <!-- Loading verification method -->
-        <div v-if="methodLoading" class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-        </div>
-
-        <form v-else @submit.prevent="handleDisable" class="space-y-4">
-          <!-- Email verification -->
-          <div v-if="verificationMethod === 'email'">
-            <label class="input-label">{{ t('profile.totp.emailCode') }}</label>
-            <div class="flex gap-2">
-              <input
-                v-model="form.emailCode"
-                type="text"
-                maxlength="6"
-                inputmode="numeric"
-                class="input flex-1"
-                :placeholder="t('profile.totp.enterEmailCode')"
-              />
-              <button
-                type="button"
-                class="btn btn-secondary whitespace-nowrap"
-                :disabled="sendingCode || codeCooldown > 0"
-                @click="handleSendCode"
-              >
-                {{ codeCooldown > 0 ? `${codeCooldown}s` : (sendingCode ? t('common.sending') : t('profile.totp.sendCode')) }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Password verification -->
-          <div v-else>
-            <label for="password" class="input-label">
-              {{ t('profile.currentPassword') }}
-            </label>
-            <input
-              id="password"
-              v-model="form.password"
-              type="password"
-              autocomplete="current-password"
-              class="input"
-              :placeholder="t('profile.totp.enterPassword')"
-            />
-          </div>
-
-          <!-- Actions -->
-          <div class="flex justify-end gap-3 pt-4">
-            <button type="button" class="btn btn-secondary" @click="$emit('close')">
-              {{ t('common.cancel') }}
-            </button>
-            <button
-              type="submit"
-              class="btn btn-danger"
-              :disabled="loading || !canSubmit"
-            >
-              {{ loading ? t('common.processing') : t('profile.totp.confirmDisable') }}
-            </button>
-          </div>
-        </form>
+  <BaseDialog
+    :show="true"
+    :title="t('profile.totp.disableTitle')"
+    width="narrow"
+    :close-on-click-outside="true"
+    @close="handleClose"
+  >
+    <div class="disable-content">
+      <div class="warning-note">
+        <span class="warning-icon" aria-hidden="true">
+          <Icon name="exclamationTriangle" size="md" />
+        </span>
+        <p>{{ t('profile.totp.disableWarning') }}</p>
       </div>
+
+      <div v-if="methodLoading" class="loading-state" role="status">
+        <Icon name="refresh" size="md" class="animate-spin" />
+        <span>{{ t('common.loading') }}</span>
+      </div>
+
+      <form v-else id="totp-disable-form" class="verification-form" @submit.prevent="handleDisable">
+        <div v-if="verificationMethod === 'email'" class="field-group">
+          <label for="totp-disable-email-code" class="input-label">
+            {{ t('profile.totp.emailCode') }}
+          </label>
+          <div class="verification-row">
+            <input
+              id="totp-disable-email-code"
+              v-model="form.emailCode"
+              type="text"
+              maxlength="6"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              class="input min-w-0 flex-1"
+              :placeholder="t('profile.totp.enterEmailCode')"
+            />
+            <button
+              type="button"
+              class="btn btn-secondary whitespace-nowrap"
+              :disabled="sendingCode || codeCooldown > 0"
+              @click="handleSendCode"
+            >
+              {{ codeCooldown > 0 ? `${codeCooldown}s` : (sendingCode ? t('common.sending') : t('profile.totp.sendCode')) }}
+            </button>
+          </div>
+        </div>
+
+        <div v-else class="field-group">
+          <label for="totp-disable-password" class="input-label">
+            {{ t('profile.currentPassword') }}
+          </label>
+          <input
+            id="totp-disable-password"
+            v-model="form.password"
+            type="password"
+            autocomplete="current-password"
+            class="input"
+            :placeholder="t('profile.totp.enterPassword')"
+          />
+        </div>
+      </form>
     </div>
-  </div>
+
+    <template #footer>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" @click="handleClose">
+          {{ t('common.cancel') }}
+        </button>
+        <button
+          v-if="!methodLoading"
+          type="submit"
+          form="totp-disable-form"
+          class="btn btn-danger"
+          :disabled="loading || !canSubmit"
+        >
+          <Icon v-if="loading" name="refresh" size="sm" class="animate-spin" />
+          {{ loading ? t('common.processing') : t('profile.totp.confirmDisable') }}
+        </button>
+      </div>
+    </template>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Icon from '@/components/icons/Icon.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useAppStore } from '@/stores/app'
 import { totpAPI } from '@/api'
 
@@ -113,6 +115,10 @@ const canSubmit = computed(() => {
   }
   return form.value.password.length > 0
 })
+
+const handleClose = () => {
+  emit('close')
+}
 
 const loadVerificationMethod = async () => {
   methodLoading.value = true
@@ -185,3 +191,77 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.disable-content,
+.verification-form,
+.field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.disable-content {
+  gap: 1.25rem;
+}
+
+.verification-form,
+.field-group {
+  gap: 0.5rem;
+}
+
+.warning-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid color-mix(in srgb, #dc2626 18%, var(--omnio-border, #e5e7eb));
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  color: var(--omnio-muted, #6b7280);
+  background: color-mix(in srgb, #dc2626 4%, var(--omnio-surface, #fff));
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.warning-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: #dc2626;
+}
+
+.loading-state {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  color: var(--omnio-muted, #6b7280);
+  font-size: 0.8125rem;
+}
+
+.verification-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dialog-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 460px) {
+  .verification-row {
+    flex-direction: column;
+  }
+
+  .verification-row .btn,
+  .dialog-actions .btn {
+    width: 100%;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+}
+</style>

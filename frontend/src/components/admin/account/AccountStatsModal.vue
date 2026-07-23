@@ -5,17 +5,17 @@
     width="extra-wide"
     @close="handleClose"
   >
-    <div class="space-y-6">
+    <div class="stats-modal-stack">
       <!-- Account Info Header -->
       <div
         v-if="account"
-        class="flex items-center justify-between rounded-xl border border-primary-200 bg-gradient-to-r from-primary-50 to-primary-100 p-3 dark:border-primary-700/50 dark:from-primary-900/20 dark:to-primary-800/20"
+        class="account-summary"
       >
         <div class="flex items-center gap-3">
           <div
-            class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-600"
+            class="account-summary-icon"
           >
-            <Icon name="chartBar" size="md" class="text-white" />
+            <Icon name="chartBar" size="md" class="text-primary-600 dark:text-primary-400" />
           </div>
           <div>
             <div class="font-semibold text-gray-900 dark:text-gray-100">{{ account.name }}</div>
@@ -26,10 +26,10 @@
         </div>
         <span
           :class="[
-            'rounded-full px-2.5 py-1 text-xs font-semibold',
+            'account-status',
             account.status === 'active'
-              ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
-              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+              ? 'account-status-active'
+              : 'account-status-neutral'
           ]"
         >
           {{ account.status }}
@@ -43,16 +43,16 @@
 
       <template v-else-if="stats">
         <!-- Row 1: Main Stats Cards -->
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <!-- 30-Day Total Cost -->
           <div
-            class="card border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 dark:border-emerald-800/30 dark:from-emerald-900/10 dark:to-dark-700"
+            class="card stats-metric-card p-4"
           >
             <div class="mb-2 flex items-center justify-between">
               <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{
                 t('admin.accounts.stats.totalCost')
               }}</span>
-              <div class="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-900/30">
+              <div class="metric-icon metric-icon-success">
                 <Icon name="dollar" size="sm" class="text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
@@ -72,13 +72,13 @@
 
           <!-- 30-Day Total Requests -->
           <div
-            class="card border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 dark:border-blue-800/30 dark:from-blue-900/10 dark:to-dark-700"
+            class="card stats-metric-card p-4"
           >
             <div class="mb-2 flex items-center justify-between">
               <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{
                 t('admin.accounts.stats.totalRequests')
               }}</span>
-              <div class="rounded-lg bg-blue-100 p-1.5 dark:bg-blue-900/30">
+              <div class="metric-icon metric-icon-info">
                 <Icon name="bolt" size="sm" class="text-blue-600 dark:text-blue-400" />
               </div>
             </div>
@@ -92,13 +92,13 @@
 
           <!-- Daily Average Cost -->
           <div
-            class="card border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 dark:border-amber-800/30 dark:from-amber-900/10 dark:to-dark-700"
+            class="card stats-metric-card p-4"
           >
             <div class="mb-2 flex items-center justify-between">
               <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{
                 t('admin.accounts.stats.avgDailyCost')
               }}</span>
-              <div class="rounded-lg bg-amber-100 p-1.5 dark:bg-amber-900/30">
+              <div class="metric-icon metric-icon-warning">
                 <Icon
                   name="calculator"
                   size="sm"
@@ -123,13 +123,13 @@
 
           <!-- Daily Average Requests -->
           <div
-            class="card border-purple-200 bg-gradient-to-br from-purple-50 to-white p-4 dark:border-purple-800/30 dark:from-purple-900/10 dark:to-dark-700"
+            class="card stats-metric-card p-4"
           >
             <div class="mb-2 flex items-center justify-between">
               <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{
                 t('admin.accounts.stats.avgDailyRequests')
               }}</span>
-              <div class="rounded-lg bg-purple-100 p-1.5 dark:bg-purple-900/30">
+              <div class="metric-icon metric-icon-accent">
                 <svg
                   class="h-4 w-4 text-purple-600 dark:text-purple-400"
                   fill="none"
@@ -429,7 +429,7 @@
         v-else-if="!loading"
         class="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400"
       >
-        <Icon name="chartBar" size="xl" class="mb-4 h-12 w-12" />
+        <Icon name="chartBar" size="lg" class="mb-3 h-8 w-8" />
         <p class="text-sm">{{ t('admin.accounts.stats.noData') }}</p>
       </div>
     </div>
@@ -437,8 +437,9 @@
     <template #footer>
       <div class="flex justify-end">
         <button
+          type="button"
           @click="handleClose"
-          class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-dark-600 dark:text-gray-300 dark:hover:bg-dark-500"
+          class="btn btn-secondary"
         >
           {{ t('common.close') }}
         </button>
@@ -711,3 +712,115 @@ const formatDuration = (ms: number): string => {
   return `${Math.round(ms)}ms`
 }
 </script>
+
+<style scoped>
+.stats-modal-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.account-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--omnio-border, #e5e7eb);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 2.5%, var(--omnio-surface, #fff));
+}
+
+.account-summary-icon,
+.metric-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+}
+
+.account-summary-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-color: color-mix(in srgb, var(--omnio-primary, #3b82f6) 16%, transparent);
+  background: color-mix(in srgb, var(--omnio-primary, #3b82f6) 8%, transparent);
+}
+
+.account-status {
+  display: inline-flex;
+  height: 1.25rem;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1;
+  font-weight: 560;
+}
+
+.account-status-active {
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.18);
+  background: rgba(16, 185, 129, 0.09);
+}
+
+.account-status-neutral {
+  color: var(--omnio-muted, #6b7280);
+  border-color: var(--omnio-border, #e5e7eb);
+  background: color-mix(in srgb, var(--omnio-foreground, #111827) 4%, transparent);
+}
+
+.stats-modal-stack :deep(.card) {
+  border-color: var(--omnio-border, #e5e7eb) !important;
+  border-radius: 0.65rem !important;
+  background: var(--omnio-surface, #fff) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.stats-metric-card {
+  min-height: 8.25rem;
+}
+
+.metric-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.metric-icon-success {
+  border-color: rgba(16, 185, 129, 0.16);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.metric-icon-info {
+  border-color: rgba(59, 130, 246, 0.16);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.metric-icon-warning {
+  border-color: rgba(245, 158, 11, 0.18);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.metric-icon-accent {
+  border-color: rgba(139, 92, 246, 0.16);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+:global(.dark) .account-status-active {
+  color: #6ee7b7;
+}
+
+@media (max-width: 640px) {
+  .account-summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .stats-metric-card {
+    min-height: auto;
+  }
+}
+</style>

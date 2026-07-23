@@ -1,8 +1,15 @@
 <template>
-  <header class="glass sticky top-0 z-30 border-b border-gray-200/50 dark:border-dark-700/50">
-    <div class="flex h-16 items-center justify-between px-4 md:px-6">
-      <!-- Left: Mobile Menu Toggle + Page Title -->
-      <div class="flex items-center gap-4">
+  <header class="app-header glass sticky top-0 z-30 border-b border-gray-200/50 dark:border-dark-700/50">
+    <div class="flex h-12 items-center justify-between px-3 md:px-4">
+      <router-link to="/" class="app-header-brand" :aria-label="siteName">
+        <span class="app-header-logo">
+          <img :src="siteLogo || '/logo.png'" alt="" />
+        </span>
+        <span>{{ siteName }}</span>
+      </router-link>
+
+      <!-- Left: Mobile menu + primary product navigation -->
+      <div class="app-header-context flex items-center gap-3">
         <button
           @click="toggleMobileSidebar"
           class="btn-ghost btn-icon lg:hidden"
@@ -11,94 +18,34 @@
           <Icon name="menu" size="md" />
         </button>
 
-        <div class="hidden lg:block">
-          <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
-            {{ pageTitle }}
-          </h1>
-          <p v-if="pageDescription" class="text-xs text-gray-500 dark:text-dark-400">
-            {{ pageDescription }}
-          </p>
-        </div>
+        <nav class="app-header-nav" :aria-label="t('nav.console')">
+          <router-link to="/home">{{ t('nav.home') }}</router-link>
+          <router-link :to="consolePath">{{ t('nav.console') }}</router-link>
+          <router-link to="/available-channels">{{ t('nav.availableChannels') }}</router-link>
+          <a v-if="docUrl" :href="docUrl" target="_blank" rel="noopener noreferrer">
+            {{ t('nav.docs') }}
+          </a>
+        </nav>
       </div>
 
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
       <div class="flex items-center gap-3">
+        <HeaderSearch v-if="user" />
+
         <!-- Announcement Bell -->
         <AnnouncementBell v-if="user" />
 
-        <!-- Docs Link -->
-        <a
-          v-if="docUrl"
-          :href="docUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
-        >
-          <Icon name="book" size="sm" />
-          <span class="hidden sm:inline">{{ t('nav.docs') }}</span>
-        </a>
-
         <!-- Language Switcher -->
         <LocaleSwitcher />
-
-        <!-- Subscription Progress (for users with active subscriptions) -->
-        <SubscriptionProgressMini v-if="user" />
-
-        <!-- Balance Display -->
-        <div
-          v-if="user"
-          class="group relative hidden items-center gap-2 rounded-xl bg-primary-50 px-3 py-1.5 dark:bg-primary-900/20 sm:flex"
-        >
-          <svg
-            class="h-4 w-4 text-primary-600 dark:text-primary-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"
-            />
-          </svg>
-          <span class="text-sm font-semibold text-primary-700 dark:text-primary-300">
-            {{ formatHeaderMoney(availableBalance) }}
-          </span>
-          <span
-            v-if="frozenBalance > 0"
-            class="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
-          >
-            {{ balanceFrozenLabel }}
-          </span>
-          <div
-            class="pointer-events-none absolute right-0 top-full mt-2 hidden w-56 rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg group-hover:block dark:border-dark-700 dark:bg-dark-800"
-          >
-            <div class="flex items-center justify-between">
-              <span class="text-gray-500 dark:text-dark-400">{{ balanceAvailableText }}</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ formatHeaderMoney(availableBalance) }}</span>
-            </div>
-            <div class="mt-2 flex items-center justify-between">
-              <span class="text-gray-500 dark:text-dark-400">{{ balanceFrozenText }}</span>
-              <span class="font-medium text-amber-700 dark:text-amber-200">{{ formatHeaderMoney(frozenBalance) }}</span>
-            </div>
-            <div class="mt-2 border-t border-gray-100 pt-2 dark:border-dark-700">
-              <div class="flex items-center justify-between">
-                <span class="text-gray-500 dark:text-dark-400">{{ balanceTotalText }}</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ formatHeaderMoney(totalBalance) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <!-- User Dropdown -->
         <div v-if="user" class="relative" ref="dropdownRef">
           <button
             @click="toggleDropdown"
-            class="flex items-center gap-2 rounded-xl p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-dark-800"
+            class="profile-trigger"
             aria-label="User Menu"
           >
-            <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-sm font-medium text-white shadow-sm">
+            <div class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold text-white" :style="avatarStyle">
               <img
                 v-if="avatarUrl"
                 :src="avatarUrl"
@@ -107,30 +54,27 @@
               >
               <span v-else>{{ userInitials }}</span>
             </div>
-            <div class="hidden text-left md:block">
-              <div class="text-sm font-medium text-gray-900 dark:text-white">
-                {{ displayName }}
-              </div>
-              <div class="text-xs capitalize text-gray-500 dark:text-dark-400">
-                {{ user.role }}
-              </div>
-            </div>
-            <Icon name="chevronDown" size="sm" class="hidden text-gray-400 md:block" />
           </button>
 
           <!-- Dropdown Menu -->
           <transition name="dropdown">
             <div v-if="dropdownOpen" class="dropdown right-0 mt-2 w-56">
               <!-- User Info -->
-              <div class="border-b border-gray-100 px-4 py-3 dark:border-dark-700">
-                <div class="text-sm font-medium text-gray-900 dark:text-white">
-                  {{ displayName }}
+              <div class="flex items-center gap-2.5 border-b border-gray-100 px-3 py-3 dark:border-dark-700">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold text-white" :style="avatarStyle">
+                  <img v-if="avatarUrl" :src="avatarUrl" :alt="displayName" class="h-full w-full object-cover">
+                  <span v-else>{{ userInitials }}</span>
                 </div>
-                <div class="text-xs text-gray-500 dark:text-dark-400">{{ user.email }}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                    {{ displayName }}
+                  </div>
+                  <div class="truncate text-xs text-gray-500 dark:text-dark-400">{{ user.email }}</div>
+                </div>
               </div>
 
-              <!-- Balance (mobile only) -->
-              <div class="border-b border-gray-100 px-4 py-2 dark:border-dark-700 sm:hidden">
+              <!-- Balance stays available without crowding the reference header. -->
+              <div class="border-b border-gray-100 px-4 py-2.5 dark:border-dark-700">
                 <div class="text-xs text-gray-500 dark:text-dark-400">
                   {{ t('common.balance') }}
                 </div>
@@ -241,22 +185,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore, useAuthStore, useOnboardingStore } from '@/stores'
-import { useAdminSettingsStore } from '@/stores/adminSettings'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
-import SubscriptionProgressMini from '@/components/common/SubscriptionProgressMini.vue'
+import HeaderSearch from '@/components/common/HeaderSearch.vue'
 import AnnouncementBell from '@/components/common/AnnouncementBell.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
 
 const router = useRouter()
-const route = useRoute()
 const { t } = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
-const adminSettingsStore = useAdminSettingsStore()
 const onboardingStore = useOnboardingStore()
 
 const user = computed(() => authStore.user)
@@ -264,14 +205,13 @@ const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => appStore.contactInfo)
 const docUrl = computed(() => sanitizeUrl(appStore.docUrl))
+const siteName = computed(() => appStore.siteName || 'Sub2API')
+const siteLogo = computed(() => sanitizeUrl(appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')
 const availableBalance = computed(() => Number(user.value?.balance || 0))
 const frozenBalance = computed(() => Number(user.value?.frozen_balance || 0))
-const totalBalance = computed(() => availableBalance.value + frozenBalance.value)
-const balanceAvailableText = computed(() => t('common.availableBalance') === 'common.availableBalance' ? '可用余额' : t('common.availableBalance'))
 const balanceFrozenText = computed(() => t('common.frozenBalance') === 'common.frozenBalance' ? '冻结金额' : t('common.frozenBalance'))
-const balanceTotalText = computed(() => t('common.totalBalance') === 'common.totalBalance' ? '总余额' : t('common.totalBalance'))
-const balanceFrozenLabel = computed(() => `${balanceFrozenText.value} ${formatHeaderMoney(frozenBalance.value)}`)
+const consolePath = computed(() => authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
 
 // 只在标准模式的管理员下显示新手引导按钮
 const showOnboardingButton = computed(() => {
@@ -280,16 +220,8 @@ const showOnboardingButton = computed(() => {
 
 const userInitials = computed(() => {
   if (!user.value) return ''
-  // Prefer username, fallback to email
-  if (user.value.username) {
-    return user.value.username.substring(0, 2).toUpperCase()
-  }
-  if (user.value.email) {
-    // Get the part before @ and take first 2 chars
-    const localPart = user.value.email.split('@')[0]
-    return localPart.substring(0, 2).toUpperCase()
-  }
-  return ''
+  const name = user.value.username || user.value.email?.split('@')[0] || ''
+  return name.trim().charAt(0).toUpperCase() || '?'
 })
 
 const displayName = computed(() => {
@@ -297,28 +229,17 @@ const displayName = computed(() => {
   return user.value.username || user.value.email?.split('@')[0] || ''
 })
 
-const pageTitle = computed(() => {
-  // For custom pages, use the menu item's label instead of generic "自定义页面"
-  if (route.name === 'CustomPage') {
-    const id = route.params.id as string
-    const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
-    const menuItem = publicItems.find((item) => item.id === id)
-      ?? (authStore.isAdmin ? adminSettingsStore.customMenuItems.find((item) => item.id === id) : undefined)
-    if (menuItem?.label) return menuItem.label
+const avatarStyle = computed(() => {
+  if (avatarUrl.value) return undefined
+  const name = displayName.value
+  let hash = 0
+  for (let index = 0; index < name.length; index += 1) {
+    hash = (hash * 31 + name.charCodeAt(index)) >>> 0
   }
-  const titleKey = route.meta.titleKey as string
-  if (titleKey) {
-    return t(titleKey)
-  }
-  return (route.meta.title as string) || ''
-})
-
-const pageDescription = computed(() => {
-  const descKey = route.meta.descriptionKey as string
-  if (descKey) {
-    return t(descKey)
-  }
-  return (route.meta.description as string) || ''
+  const hue = hash % 360
+  const saturation = 54 + (hash % 8)
+  const lightness = 52 + ((hash >> 4) % 8)
+  return { backgroundColor: `hsl(${hue} ${saturation}% ${lightness}%)` }
 })
 
 function toggleMobileSidebar() {
@@ -370,6 +291,24 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.profile-trigger {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.profile-trigger:hover {
+  background: color-mix(in srgb, var(--omnio-foreground) 6%, transparent);
+}
+
+.profile-trigger:active {
+  transform: scale(0.96);
+}
+
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.2s ease;
