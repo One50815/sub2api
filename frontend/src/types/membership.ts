@@ -14,8 +14,6 @@ export interface MembershipGroupBenefit {
 export interface OmnioProQuotaProgress {
   level_id: number
   level_name: string
-  group_id: number
-  group_name: string
   daily_limit_usd: number
   daily_used_usd: number
   daily_remaining_usd: number
@@ -33,6 +31,8 @@ export interface MembershipLevel {
   badge_color: string
   concurrency_bonus: number
   priority_support: boolean
+  daily_free_usd?: number
+  monthly_free_usd?: number
   active: boolean
   sort_order: number
   group_benefits?: MembershipGroupBenefit[]
@@ -59,6 +59,7 @@ export interface MembershipOffer {
 export interface MembershipGrant {
   id: number
   user_id: number
+  user_email?: string
   level_id: number
   level_name: string
   level_rank: number

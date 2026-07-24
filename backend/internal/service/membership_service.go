@@ -34,6 +34,8 @@ type MembershipLevel struct {
 	BadgeColor       string                   `json:"badge_color"`
 	ConcurrencyBonus int                      `json:"concurrency_bonus"`
 	PrioritySupport  bool                     `json:"priority_support"`
+	DailyFreeUSD     float64                  `json:"daily_free_usd"`
+	MonthlyFreeUSD   float64                  `json:"monthly_free_usd"`
 	Active           bool                     `json:"active"`
 	SortOrder        int                      `json:"sort_order"`
 	GroupBenefits    []MembershipGroupBenefit `json:"group_benefits,omitempty"`
@@ -67,8 +69,6 @@ type OmnioProGroupSetting struct {
 type OmnioProQuotaProgress struct {
 	LevelID             int64   `json:"level_id"`
 	LevelName           string  `json:"level_name"`
-	GroupID             int64   `json:"group_id"`
-	GroupName           string  `json:"group_name"`
 	DailyLimitUSD       float64 `json:"daily_limit_usd"`
 	DailyUsedUSD        float64 `json:"daily_used_usd"`
 	DailyRemainingUSD   float64 `json:"daily_remaining_usd"`
@@ -105,6 +105,7 @@ type MembershipOffer struct {
 type MembershipGrant struct {
 	ID         int64     `json:"id"`
 	UserID     int64     `json:"user_id"`
+	UserEmail  string    `json:"user_email,omitempty"`
 	LevelID    int64     `json:"level_id"`
 	LevelName  string    `json:"level_name"`
 	LevelRank  int       `json:"level_rank"`
@@ -277,7 +278,7 @@ func (s *MembershipService) GetSummary(ctx context.Context, userID int64) (*Memb
 func (s *MembershipService) ListOmnioProQuotaProgress(ctx context.Context, userID int64) ([]OmnioProQuotaProgress, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		WITH effective_level AS (
-			SELECT ml.id, ml.name
+			SELECT ml.id, ml.name, ml.daily_free_usd, ml.monthly_free_usd
 			FROM user_membership_grants mg
 			JOIN membership_levels ml ON ml.id = mg.level_id
 			WHERE mg.user_id = $1 AND mg.status = 'active'
@@ -289,19 +290,16 @@ func (s *MembershipService) ListOmnioProQuotaProgress(ctx context.Context, userI
 				(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE AS day_start,
 				date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE AS month_start
 		)
-		SELECT e.id, e.name, b.group_id, g.name,
-		       COALESCE(b.daily_free_usd, 0),
+		SELECT e.id, e.name,
+		       e.daily_free_usd,
 		       CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END,
-		       COALESCE(b.monthly_free_usd, 0),
+		       e.monthly_free_usd,
 		       CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END
 		FROM effective_level e
-		JOIN membership_level_group_benefits b ON b.level_id = e.id
-		JOIN groups g ON g.id = b.group_id AND g.deleted_at IS NULL
 		CROSS JOIN period p
-		LEFT JOIN omnio_pro_level_quota_usage u
-		  ON u.user_id = $1 AND u.level_id = e.id AND u.group_id = b.group_id
-		WHERE (COALESCE(b.daily_free_usd, 0) > 0 OR COALESCE(b.monthly_free_usd, 0) > 0)
-		ORDER BY g.sort_order, g.id`, userID)
+		LEFT JOIN omnio_pro_level_shared_quota_usage u
+		  ON u.user_id = $1 AND u.level_id = e.id
+		WHERE e.daily_free_usd > 0 OR e.monthly_free_usd > 0`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -313,8 +311,6 @@ func (s *MembershipService) ListOmnioProQuotaProgress(ctx context.Context, userI
 		if err := rows.Scan(
 			&item.LevelID,
 			&item.LevelName,
-			&item.GroupID,
-			&item.GroupName,
 			&item.DailyLimitUSD,
 			&item.DailyUsedUSD,
 			&item.MonthlyLimitUSD,
@@ -346,7 +342,7 @@ func (s *MembershipService) HasAvailableOmnioProQuota(ctx context.Context, userI
 	var available bool
 	err := s.db.QueryRowContext(ctx, `
 		WITH effective_level AS (
-			SELECT ml.id
+			SELECT ml.id, ml.daily_free_usd, ml.monthly_free_usd
 			FROM user_membership_grants mg
 			JOIN membership_levels ml ON ml.id = mg.level_id
 			WHERE mg.user_id = $1 AND mg.status = 'active'
@@ -363,20 +359,21 @@ func (s *MembershipService) HasAvailableOmnioProQuota(ctx context.Context, userI
 			FROM effective_level e
 			JOIN membership_level_group_benefits b ON b.level_id = e.id
 			CROSS JOIN period p
-			LEFT JOIN omnio_pro_level_quota_usage u
-			  ON u.user_id = $1 AND u.level_id = e.id AND u.group_id = b.group_id
+			LEFT JOIN omnio_pro_level_shared_quota_usage u
+			  ON u.user_id = $1 AND u.level_id = e.id
 			WHERE b.group_id = $2
+			  AND b.allow_access = TRUE
 			  AND (
-				(COALESCE(b.daily_free_usd, 0) > 0 AND
-				 CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < b.daily_free_usd)
+				(e.daily_free_usd > 0 AND
+				 CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < e.daily_free_usd)
 				OR
-				(COALESCE(b.monthly_free_usd, 0) > 0 AND
-				 CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < b.monthly_free_usd)
+				(e.monthly_free_usd > 0 AND
+				 CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < e.monthly_free_usd)
 			  )
-			  AND (COALESCE(b.daily_free_usd, 0) <= 0 OR
-				   CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < b.daily_free_usd)
-			  AND (COALESCE(b.monthly_free_usd, 0) <= 0 OR
-				   CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < b.monthly_free_usd)
+			  AND (e.daily_free_usd <= 0 OR
+				   CASE WHEN u.daily_window_start = p.day_start THEN COALESCE(u.daily_used_usd, 0) ELSE 0 END < e.daily_free_usd)
+			  AND (e.monthly_free_usd <= 0 OR
+				   CASE WHEN u.monthly_window_start = p.month_start THEN COALESCE(u.monthly_used_usd, 0) ELSE 0 END < e.monthly_free_usd)
 		)`, userID, groupID).Scan(&available)
 	return err == nil && available
 }
@@ -384,7 +381,8 @@ func (s *MembershipService) HasAvailableOmnioProQuota(ctx context.Context, userI
 func (s *MembershipService) getEffectiveLevel(ctx context.Context, userID int64) (*MembershipLevel, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT l.id, l.name, l.slug, l.description, l.rank, l.badge_color,
-		       l.concurrency_bonus, l.priority_support, l.active, l.sort_order, l.created_at, l.updated_at
+		       l.concurrency_bonus, l.priority_support, l.daily_free_usd, l.monthly_free_usd,
+		       l.active, l.sort_order, l.created_at, l.updated_at
 		FROM user_membership_grants g
 		JOIN membership_levels l ON l.id = g.level_id
 		WHERE g.user_id = $1 AND g.status = 'active' AND g.starts_at <= NOW()
@@ -392,7 +390,8 @@ func (s *MembershipService) getEffectiveLevel(ctx context.Context, userID int64)
 		ORDER BY l.rank DESC, g.expires_at DESC, l.id DESC LIMIT 1`, userID)
 	var level MembershipLevel
 	err := row.Scan(&level.ID, &level.Name, &level.Slug, &level.Description, &level.Rank,
-		&level.BadgeColor, &level.ConcurrencyBonus, &level.PrioritySupport, &level.Active,
+		&level.BadgeColor, &level.ConcurrencyBonus, &level.PrioritySupport,
+		&level.DailyFreeUSD, &level.MonthlyFreeUSD, &level.Active,
 		&level.SortOrder, &level.CreatedAt, &level.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -690,7 +689,8 @@ func (s *MembershipService) UpsertOmnioProGroupSetting(ctx context.Context, sett
 func (s *MembershipService) GetCatalog(ctx context.Context) (*MembershipCatalog, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, name, slug, description, rank, badge_color, concurrency_bonus,
-		       priority_support, active, sort_order, created_at, updated_at
+		       priority_support, daily_free_usd, monthly_free_usd,
+		       active, sort_order, created_at, updated_at
 		FROM membership_levels ORDER BY rank, sort_order, id`)
 	if err != nil {
 		return nil, err
@@ -699,7 +699,8 @@ func (s *MembershipService) GetCatalog(ctx context.Context) (*MembershipCatalog,
 	for rows.Next() {
 		var level MembershipLevel
 		if err := rows.Scan(&level.ID, &level.Name, &level.Slug, &level.Description, &level.Rank,
-			&level.BadgeColor, &level.ConcurrencyBonus, &level.PrioritySupport, &level.Active,
+			&level.BadgeColor, &level.ConcurrencyBonus, &level.PrioritySupport,
+			&level.DailyFreeUSD, &level.MonthlyFreeUSD, &level.Active,
 			&level.SortOrder, &level.CreatedAt, &level.UpdatedAt); err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -728,7 +729,8 @@ func (s *MembershipService) GetCatalog(ctx context.Context) (*MembershipCatalog,
 func (s *MembershipService) UpsertLevel(ctx context.Context, level MembershipLevel) (*MembershipLevel, error) {
 	level.Name = strings.TrimSpace(level.Name)
 	level.Slug = strings.ToLower(strings.TrimSpace(level.Slug))
-	if level.Name == "" || level.Slug == "" || level.Rank < 0 || level.ConcurrencyBonus < 0 {
+	if level.Name == "" || level.Slug == "" || level.Rank < 0 || level.ConcurrencyBonus < 0 ||
+		level.DailyFreeUSD < 0 || level.MonthlyFreeUSD < 0 {
 		return nil, infraerrors.BadRequest("INVALID_MEMBERSHIP_LEVEL", "name, slug and non-negative limits are required")
 	}
 	if strings.TrimSpace(level.BadgeColor) == "" {
@@ -736,10 +738,14 @@ func (s *MembershipService) UpsertLevel(ctx context.Context, level MembershipLev
 	}
 	if level.ID == 0 {
 		err := s.db.QueryRowContext(ctx, `
-			INSERT INTO membership_levels (name, slug, description, rank, badge_color, concurrency_bonus, priority_support, active, sort_order)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			INSERT INTO membership_levels (
+				name, slug, description, rank, badge_color, concurrency_bonus,
+				priority_support, daily_free_usd, monthly_free_usd, active, sort_order
+			)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 			RETURNING id, created_at, updated_at`, level.Name, level.Slug, level.Description, level.Rank,
-			level.BadgeColor, level.ConcurrencyBonus, level.PrioritySupport, level.Active, level.SortOrder).
+			level.BadgeColor, level.ConcurrencyBonus, level.PrioritySupport, level.DailyFreeUSD,
+			level.MonthlyFreeUSD, level.Active, level.SortOrder).
 			Scan(&level.ID, &level.CreatedAt, &level.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -747,9 +753,11 @@ func (s *MembershipService) UpsertLevel(ctx context.Context, level MembershipLev
 	} else {
 		result, err := s.db.ExecContext(ctx, `
 			UPDATE membership_levels SET name=$2, slug=$3, description=$4, rank=$5, badge_color=$6,
-			concurrency_bonus=$7, priority_support=$8, active=$9, sort_order=$10, updated_at=NOW()
+			concurrency_bonus=$7, priority_support=$8, daily_free_usd=$9, monthly_free_usd=$10,
+			active=$11, sort_order=$12, updated_at=NOW()
 			WHERE id=$1`, level.ID, level.Name, level.Slug, level.Description, level.Rank,
-			level.BadgeColor, level.ConcurrencyBonus, level.PrioritySupport, level.Active, level.SortOrder)
+			level.BadgeColor, level.ConcurrencyBonus, level.PrioritySupport, level.DailyFreeUSD,
+			level.MonthlyFreeUSD, level.Active, level.SortOrder)
 		if err != nil {
 			return nil, err
 		}
@@ -935,6 +943,73 @@ func (s *MembershipService) GrantManual(ctx context.Context, userID, levelID int
 	}
 	sourceID := fmt.Sprintf("manual:%d:%d", userID, time.Now().UnixNano())
 	return s.createGrant(ctx, userID, levelID, "manual", sourceID, days, notes, operator)
+}
+
+func (s *MembershipService) ListGrants(ctx context.Context, userID *int64, status string, limit int) ([]MembershipGrant, error) {
+	if userID != nil && *userID <= 0 {
+		return nil, infraerrors.BadRequest("INVALID_MEMBERSHIP_GRANT_USER", "user_id must be positive")
+	}
+	if status == "" {
+		status = MembershipGrantStatusActive
+	}
+	if status != MembershipGrantStatusActive && status != MembershipGrantStatusRevoked && status != "all" {
+		return nil, infraerrors.BadRequest("INVALID_MEMBERSHIP_GRANT_STATUS", "status must be active, revoked or all")
+	}
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+
+	var userArg any
+	if userID != nil {
+		userArg = *userID
+	}
+	statusArg := status
+	if status == "all" {
+		statusArg = ""
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT g.id, g.user_id, u.email, g.level_id, l.name, l.rank, l.badge_color,
+		       g.source_type, g.source_id, g.starts_at, g.expires_at, g.status, g.notes
+		FROM user_membership_grants g
+		JOIN users u ON u.id = g.user_id
+		JOIN membership_levels l ON l.id = g.level_id
+		WHERE ($1::BIGINT IS NULL OR g.user_id = $1)
+		  AND (
+		      $2 = ''
+		      OR ($2 = 'active' AND g.status = 'active' AND g.expires_at > NOW())
+		      OR ($2 = 'revoked' AND g.status = 'revoked')
+		  )
+		ORDER BY CASE WHEN g.status = 'active' THEN 0 ELSE 1 END,
+		         g.expires_at DESC, g.id DESC
+		LIMIT $3`, userArg, statusArg, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	items := make([]MembershipGrant, 0)
+	for rows.Next() {
+		var item MembershipGrant
+		if err := rows.Scan(
+			&item.ID,
+			&item.UserID,
+			&item.UserEmail,
+			&item.LevelID,
+			&item.LevelName,
+			&item.LevelRank,
+			&item.BadgeColor,
+			&item.SourceType,
+			&item.SourceID,
+			&item.StartsAt,
+			&item.ExpiresAt,
+			&item.Status,
+			&item.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func (s *MembershipService) GrantOfferFromOrder(ctx context.Context, orderID, userID, offerID int64) error {

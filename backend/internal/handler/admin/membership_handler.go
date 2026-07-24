@@ -218,6 +218,30 @@ func (h *MembershipHandler) Grant(c *gin.Context) {
 	response.Success(c, grant)
 }
 
+func (h *MembershipHandler) ListGrants(c *gin.Context) {
+	var userID *int64
+	if value := c.Query("user_id"); value != "" {
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || parsed <= 0 {
+			response.BadRequest(c, "Invalid user ID")
+			return
+		}
+		userID = &parsed
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	items, err := h.service.ListGrants(
+		c.Request.Context(),
+		userID,
+		c.DefaultQuery("status", service.MembershipGrantStatusActive),
+		limit,
+	)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, items)
+}
+
 func (h *MembershipHandler) RevokeGrant(c *gin.Context) {
 	subject, ok := middleware2.GetAuthSubjectFromContext(c)
 	if !ok {

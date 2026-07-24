@@ -41,6 +41,9 @@ export const membershipAPI = {
   grant(data: { user_id: number; level_id: number; days: number; notes?: string }) {
     return apiClient.post<MembershipGrant>('/admin/membership/grants', data)
   },
+  listGrants(params: { user_id?: number; status?: 'active' | 'revoked' | 'all'; limit?: number } = {}) {
+    return apiClient.get<MembershipGrant[]>('/admin/membership/grants', { params })
+  },
   revokeGrant(id: number) {
     return apiClient.post(`/admin/membership/grants/${id}/revoke`)
   },

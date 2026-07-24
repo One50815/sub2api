@@ -687,6 +687,7 @@ func registerMembershipRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		membership.PUT("/plan-benefits", h.Admin.Membership.SetPlanBenefit)
 		membership.DELETE("/plan-benefits/:planId", h.Admin.Membership.DeletePlanBenefit)
 		membership.POST("/grants", h.Admin.Membership.Grant)
+		membership.GET("/grants", h.Admin.Membership.ListGrants)
 		membership.POST("/grants/:id/revoke", h.Admin.Membership.RevokeGrant)
 		membership.GET("/audit-logs", h.Admin.Membership.AuditLogs)
 	}
