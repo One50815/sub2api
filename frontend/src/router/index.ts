@@ -207,6 +207,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/image-generation',
+    name: 'ImageGeneration',
+    component: () => import('@/views/user/ImageGenerationView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'AI Image Studio',
+      titleKey: 'imageGeneration.title',
+      descriptionKey: 'imageGeneration.description'
+    }
+  },
+  {
     path: '/batch-image',
     name: 'BatchImageGuide',
     alias: '/docs/batch-image',

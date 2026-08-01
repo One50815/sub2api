@@ -161,6 +161,7 @@ export default {
     myTickets: 'My Tickets',
     ticketManagement: 'Ticket Management',
     apiKeys: 'API Keys',
+    imageGeneration: 'AI Image Studio',
     batchImage: 'Batch Images',
     usage: 'Usage',
     redeem: 'Redeem',

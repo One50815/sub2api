@@ -2,6 +2,7 @@ import landing from './landing'
 import common from './common'
 import dashboard from './dashboard'
 import batchImage from './batchImage'
+import imageGeneration from './imageGeneration'
 import admin from './admin'
 import misc from './misc'
 import tickets from './tickets'
@@ -11,6 +12,7 @@ export default {
   ...common,
   ...dashboard,
   ...batchImage,
+  ...imageGeneration,
   admin,
   ...misc,
   ...tickets,

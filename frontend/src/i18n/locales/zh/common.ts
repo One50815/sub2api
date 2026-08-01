@@ -161,6 +161,7 @@ export default {
     myTickets: '我的工单',
     ticketManagement: '工单管理',
     apiKeys: 'API 密钥',
+    imageGeneration: 'AI 绘图',
     batchImage: '批量生图',
     usage: '使用记录',
     redeem: '兑换',
