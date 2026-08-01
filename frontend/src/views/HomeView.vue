@@ -226,6 +226,15 @@ const siteName = computed(() => {
   return injectedName && injectedName !== 'Sub2API' ? injectedName : 'Omnio'
 })
 
+// Keep the configured logo URL on the same sanitization path as other branded surfaces.
+// The Omnio V2 header currently renders the native mark, while this guarded value remains
+// ready for installations that opt back into their uploaded logo.
+const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', {
+  allowRelative: true,
+  allowDataUrl: true
+}))
+void siteLogo.value
+
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
 const isHomeContentUrl = computed(() => /^https?:\/\//i.test(homeContent.value.trim()))

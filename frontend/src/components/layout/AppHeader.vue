@@ -22,6 +22,12 @@
           <router-link to="/home">{{ t('nav.home') }}</router-link>
           <router-link :to="consolePath">{{ t('nav.console') }}</router-link>
           <router-link to="/available-channels">{{ t('nav.availableChannels') }}</router-link>
+          <router-link
+            v-if="user && modelPlazaEnabled"
+            :to="{ path: '/model-plaza', query: { embedded: '1' } }"
+          >
+            {{ t('nav.modelPlaza') }}
+          </router-link>
           <a v-if="docUrl" :href="docUrl" target="_blank" rel="noopener noreferrer">
             {{ t('nav.docs') }}
           </a>
@@ -34,7 +40,6 @@
 
         <!-- Announcement Bell -->
         <AnnouncementBell v-if="user" />
-
         <!-- Language Switcher -->
         <LocaleSwitcher />
 
@@ -193,6 +198,7 @@ import HeaderSearch from '@/components/common/HeaderSearch.vue'
 import AnnouncementBell from '@/components/common/AnnouncementBell.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
+import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -207,6 +213,7 @@ const contactInfo = computed(() => appStore.contactInfo)
 const docUrl = computed(() => sanitizeUrl(appStore.docUrl))
 const siteName = computed(() => appStore.siteName || 'Sub2API')
 const siteLogo = computed(() => sanitizeUrl(appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
+const modelPlazaEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.modelPlaza))
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')
 const availableBalance = computed(() => Number(user.value?.balance || 0))
 const frozenBalance = computed(() => Number(user.value?.frozen_balance || 0))
