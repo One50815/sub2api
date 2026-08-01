@@ -2,7 +2,7 @@
 
 > 状态：生效中  
 > 最后核对日期：2026-08-02
-> 基线：`main`，`3f97d49e`（版本 `0.1.164`；官方提交 `cb24522dd53f8f363d008e3afdc8e4baf9788cab`）
+> 基线：`main`，`18a4d575c`（版本 `0.1.169`；官方提交 `26d894ef4`）
 > 决策：采用“方案一”，保留 Sub2API 的 Vue 业务实现，高保真、全站复刻独立 React 前端的视觉与交互  
 > 前端重做状态：已完成，进入长期维护与上游同步阶段  
 > 维护要求：每次改变架构、接口、合并策略或完成一个重做阶段时，同步更新本文档
@@ -501,6 +501,7 @@ go test -tags=e2e -v -timeout=300s ./internal/integration/...
 | 2026-07-29 | `Omnio v2 homepage` | 按 Omnio v2 PRD 重构正式 Vue 首页：将首屏聚焦为“一个入口，连接所有 AI”，以轻量动态模型网络替代素材堆叠；新增普通用户智能选择工作区、开发者代码与实时 Dashboard、个人/开发者/企业三条价格入口，以及克制的滚动、节点和数据微动效；移除上一版失败方案的机器人、像素景观、重复插画与验收产物 | 视觉实现不新增图片资源，使用现有模型图标、CSS 与 SVG 数据网络；保留自定义首页内容、公开设置、鉴权入口、深浅主题和移动端行为。受影响 Vue/TypeScript 检查、定向 ESLint、生产构建通过；在 `1280x720` 和 `390x844` 下完成实际页面检查，移动端无页面级横向溢出 |
 | 2026-07-30 | `Omnio v2 Pixel AI brand pass` | 在不改变 v2 页面结构与区块顺序的前提下，将视觉人格从通用 Linear/Vercel 式 SaaS 回摆为“AI 模型世界里的可爱入口”，并建立完整 Pixel UI System：所有主按钮、导航 CTA、输入框、标签、场景卡、价格入口和关键容器统一使用两级阶梯切角；Hero 保留“一个入口，连接所有 AI”，唯一 Pixel Mascot 改为蹲下拉线、把发光数据插头接入 Core 的主动操作姿态，五个模型使用非圆形 Pixel 节点、方形 ONLINE 状态、实时延迟和 8 段信号条；普通用户工作区进入视口后自动输入“爆款广告标题”任务，Omnio 小向导用品牌标记而非重复 Mascot 给出模型选择建议，候选模型以 Pixel 节点逐格生成；Network 使用深色沉浸式 AI 星系、不规则 Pixel 节点、彩色数据流和轨道环，同时保留真实路由详情；背景从 Linear 式连续网格改为少量方块、数据短线和漂浮碎片；Section、节点和卡片的进入方式从普通 fade 调整为 steps 逐格构建；Developer 保持“选择模型 → 自动生成统一 API → 复制调用”；CTA 使用深色 Pixel Portal 品牌结尾并与 footer 保持独立正常流 | DeepSeek 已从首页全部替换为 Grok；全站只保留一张现代像素角色素材 `frontend/public/assets/brand/omnio-pixel-mascot-connector-v2.png`，Mascot 只在 Hero 出现一次，不增加像素城市、多个机器人或大面积背景插画。受影响 Vue/TypeScript 检查、定向 ESLint、`git diff --check` 与生产构建已通过；预览服务按要求保持关闭，实际滚动、CTA/footer 与移动端视觉验收待明确重启后进行 |
 | 2026-08-02 | `native-ai-image-studio` | 新增登录用户原生“AI 绘图”页 `/image-generation`，由用户选择已有且允许图片生成的 API Key 与图片模型，支持提示词、三种尺寸、1–4 张输出、生成状态、原图查看、下载和会话记录；页面直接复用 `/v1/models`、`/v1/images/generations/async`、`/v1/images/tasks/:task_id` 与 `/v1/images/generations`，不使用 iframe，也不新增第二套账户或余额 | 计费、余额校验、内容审核、分组权限、并发控制与用量记录继续由现有网关负责，因此无需登记新的后端 `FORK-xxx`；OpenAI/Grok 优先异步，对象存储未启用时只针对明确的功能关闭错误回退同步，组合分组直接走现有同步路由；原 `/batch-image` 批量生图保持不变。定向 ESLint、TypeScript、API/页面契约测试、国际化编译与生产构建通过 |
+| 2026-08-02 | 官方 `0.1.169` / `26d894ef4` | 在 `sync/upstream-20260802` 连接官方 `0.1.164` 历史后合并 `v0.1.169`，吸收 GHSA-vrxq-qm4h-6hgg 路径校验安全修复、Passkey、模型广场、OpenAI Live、面板限流、SMTP/计价/模型兼容与容器 `no-new-privileges` 等更新；重新生成 Ent 与 Wire | 保留 Omnio v2 首页、原生 AI 绘图、工单、Omnio Pro、共享额度和公开订阅退役边界；页面冲突均按“保留 Omnio 视觉并移植上游行为”处理，渠道页同步接入用户专属倍率；官方迁移 187–191 与 Fork 同号迁移按完整文件名并存。后端全量测试、前端 lint/typecheck、200 个测试文件 1360 个测试、生产构建和差异校验通过 |
 
 每次更新记录一行，内容应说明“为什么”，不能只写“更新文档”。当表格过长时，可按年度归档到 `docs/history/`，但保留最近一年和所有未完成决策。
 
@@ -538,6 +539,7 @@ go test -tags=e2e -v -timeout=300s ./internal/integration/...
 - 2026-07-24 分组会员倍率门禁：定向测试 3 个通过，分组页面回归 4 个文件、14 个测试通过，`pnpm run lint:check`、`pnpm run typecheck`、`pnpm run build` 通过；桌面端和 `390px` 移动端预览无横向溢出。生产镜像内 `vue-tsc`、Vite 和 Go embed 构建通过，新容器 `sub2api:custom-20260724-group-member-rates` healthy、重启次数为 0；内外网 `/health` 均返回 `{"status":"ok"}`，生产 `GroupsView` 静态资源返回 200 且包含新增会员等级、重复限制与继承提示，PostgreSQL/Redis 保持原实例 healthy。
 - 2026-07-24 共享额度与权限撤销门禁：迁移、共享计费、额度进度/可用性和发放撤销定向测试通过，相关前端 2 个文件共 6 个测试通过；`pnpm run lint:check`、`pnpm run typecheck`、`pnpm run build`、Go 受影响服务/handler/routes/cmd 编译和 `git diff --check` 通过。生产镜像内 `vue-tsc`、Vite 和 Go embed 构建通过；新容器 `sub2api:custom-20260724-omnio-pro-shared-quota` healthy、重启次数为 0，管理员权限列表/等级目录/用户摘要均返回 200，迁移 192 已登记，共享表 12 条且旧用量回填差异为 0；内外网 `/health`、`/omnio-pro` 和 `/admin/omnio-pro` 正常，桌面及 `390px` 用户/管理员页无页面级横向溢出，PostgreSQL/Redis 保持原实例 healthy。
 - 2026-08-02 原生 AI 绘图门禁：受影响文件定向 ESLint 与 `pnpm run typecheck` 通过；图片 API 和页面接入共 2 个测试文件、8 个测试通过；中英文消息编译与键冲突共 8 个测试通过；`pnpm run build` 成功生成 `ImageGenerationView` 独立异步资源。构建仅出现项目既有的动态/静态导入和 chunk 大小警告，未新增编译错误；本次未连接真实上游消耗用户余额进行生成验收，也未发布生产。
+- 2026-08-02 官方 `0.1.169` 同步门禁：`go generate ./ent`、`go generate ./cmd/server` 完成；`go test ./...` 全量通过；前端 `pnpm install --frozen-lockfile`、`pnpm run lint:check`、`pnpm run typecheck`、`pnpm run test:run`（200 个测试文件、1360 个测试）和 `pnpm run build` 全量通过；`git diff --check` 通过且无冲突标记。首次并行重压出现的两个后端毫秒级超时用例单独复跑通过，随后缓存预热后的后端全量复跑干净通过；未执行真实图片生成，避免消耗用户余额和上游额度。
 
 ### 14.3 后续维护入口
 
