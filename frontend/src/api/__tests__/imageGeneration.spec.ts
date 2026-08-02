@@ -3,6 +3,7 @@ import {
   ImageGenerationAPIError,
   imageOutputSource,
   isImageGenerationModel,
+  mergeImageGenerationModels,
   submitImageGeneration,
 } from '../imageGeneration'
 
@@ -24,6 +25,18 @@ describe('imageGeneration API', () => {
     expect(isImageGenerationModel('grok-imagine-image')).toBe(true)
     expect(isImageGenerationModel('gpt-5.2')).toBe(false)
     expect(isImageGenerationModel('grok-4')).toBe(false)
+  })
+
+  it('keeps preferred image models first while preserving discovered models', () => {
+    expect(mergeImageGenerationModels(
+      ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1'],
+      ['gpt-image-1.5', 'gpt-image-2', 'gpt-image-custom'],
+    )).toEqual([
+      'gpt-image-2',
+      'gpt-image-1.5',
+      'gpt-image-1',
+      'gpt-image-custom',
+    ])
   })
 
   it('returns an async task when the task endpoint accepts the request', async () => {

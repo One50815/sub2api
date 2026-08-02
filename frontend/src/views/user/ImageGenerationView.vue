@@ -58,18 +58,17 @@
                   <i></i>{{ t('imageGeneration.composer.modelLoading') }}
                 </span>
               </div>
-              <input
+              <select
                 id="image-studio-model"
-                v-model.trim="form.model"
-                list="image-studio-model-options"
+                v-model="form.model"
                 class="input font-mono"
-                type="text"
-                autocomplete="off"
-                :placeholder="t('imageGeneration.composer.modelPlaceholder')"
-              />
-              <datalist id="image-studio-model-options">
-                <option v-for="model in availableModels" :key="model" :value="model" />
-              </datalist>
+                :disabled="loadingModels"
+              >
+                <option value="" disabled>{{ t('imageGeneration.composer.modelPlaceholder') }}</option>
+                <option v-for="model in availableModels" :key="model" :value="model">
+                  {{ model }}
+                </option>
+              </select>
               <p class="image-studio-field-hint">{{ modelHint }}</p>
             </div>
 
@@ -241,6 +240,7 @@ import {
   imageTaskResult,
   isImageGenerationModel,
   listImageGenerationModels,
+  mergeImageGenerationModels,
   submitImageGeneration,
   type GeneratedImageOutput,
   type ImageGenerationResponse,
@@ -382,7 +382,7 @@ async function loadModels() {
     const discovered = (response.data || [])
       .map((model) => String(model?.id || '').trim())
       .filter(isImageGenerationModel)
-    availableModels.value = [...new Set([...discovered, ...fallbackModelsForKey(key)])]
+    availableModels.value = mergeImageGenerationModels(fallbackModelsForKey(key), discovered)
   } catch (error) {
     if ((error as Error)?.name === 'AbortError') return
     if (requestSequence !== modelRequestSequence) return

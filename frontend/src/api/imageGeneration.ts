@@ -111,6 +111,16 @@ export function isImageGenerationModel(model: string): boolean {
     normalized.startsWith('grok-imagine-image')
 }
 
+export function mergeImageGenerationModels(
+  preferredModels: string[],
+  discoveredModels: string[],
+): string[] {
+  const models = [...preferredModels, ...discoveredModels]
+    .map((model) => String(model || '').trim())
+    .filter(Boolean)
+  return [...new Set(models)]
+}
+
 export async function listImageGenerationModels(
   apiKey: string,
   signal?: AbortSignal,
