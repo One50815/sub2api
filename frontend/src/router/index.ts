@@ -223,7 +223,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresAdmin: false,
-      title: 'AI Image Studio',
+      title: 'Image Playground',
       titleKey: 'imageGeneration.title',
       descriptionKey: 'imageGeneration.description'
     }

@@ -1,35 +1,35 @@
 <template>
-  <div class="sub2-auth-shell dark" @pointermove="handlePointerMove">
+  <div class="sub2-auth-shell">
     <section class="sub2-auth-stage">
-      <div class="auth-pointer-glow"></div>
-      <div class="auth-grid"></div>
-      <div class="auth-particles"></div>
-      <div class="auth-scan"></div>
-      <div class="auth-aurora auth-aurora-one"></div>
-      <div class="auth-aurora auth-aurora-two"></div>
-
       <header class="sub2-auth-header">
         <router-link to="/" class="sub2-auth-brand">
           <span class="sub2-auth-logo">
-            <img :src="siteLogo || '/logo.png'" alt="" />
+            <img v-if="siteLogo" :src="siteLogo" alt="" />
+            <OmnioMark v-else :label="siteName" />
           </span>
           <span>{{ siteName }}</span>
         </router-link>
         <div class="sub2-auth-toolbar">
           <LocaleSwitcher />
-          <button type="button" class="auth-tool-button" :aria-label="isDark ? 'Light theme' : 'Dark theme'" @click="toggleTheme">
+          <button
+            type="button"
+            class="auth-tool-button"
+            :aria-label="isDark ? t('home.switchToLight') : t('home.switchToDark')"
+            :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
+            @click="toggleTheme"
+          >
             <Icon :name="isDark ? 'sun' : 'moon'" size="sm" />
           </button>
         </div>
       </header>
 
       <div class="sub2-auth-content">
-        <section class="auth-gateway-visual" aria-hidden="true">
+        <section class="auth-gateway-visual" :aria-label="t('auth.gatewayEyebrow')">
           <div class="auth-gateway-copy">
             <span class="auth-gateway-eyebrow">{{ t('auth.gatewayEyebrow') }}</span>
             <h1>
-              {{ t('auth.gatewayTitle') }}
-              <span>{{ t('auth.gatewayTitleAccent') }}</span>
+              <span class="auth-gateway-title-line">{{ t('auth.gatewayTitle') }}</span>
+              <span class="auth-gateway-title-line is-accent">{{ t('auth.gatewayTitleAccent') }}</span>
             </h1>
             <p>{{ t('auth.gatewayDescription') }}</p>
             <div class="auth-value-list">
@@ -43,7 +43,7 @@
             </div>
           </div>
 
-          <div class="auth-network">
+          <div class="auth-network" aria-hidden="true">
             <img
               class="auth-core-asset"
               src="/assets/auth/omnio-core-orbit.webp?v=2"
@@ -52,7 +52,7 @@
               height="1000"
               fetchpriority="high"
             />
-            <svg class="auth-network-routes" viewBox="0 0 600 600" fill="none">
+            <svg class="auth-network-routes" viewBox="0 0 600 600" fill="none" focusable="false">
               <path
                 v-for="(path, index) in routePaths"
                 :key="path"
@@ -62,7 +62,7 @@
               />
             </svg>
             <div class="auth-network-core">
-              <img src="/assets/brand/omnio-mark.svg?v=3" alt="" />
+              <OmnioMark :label="siteName" />
               <strong>{{ siteName }}</strong>
               <span>{{ t('auth.gatewayEyebrow') }}</span>
             </div>
@@ -99,6 +99,7 @@ import { sanitizeUrl } from '@/utils/url'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import ModelIcon from '@/components/common/ModelIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
+import OmnioMark from '@/components/home-v2/OmnioMark.vue'
 
 const appStore = useAppStore()
 const { t } = useI18n()
@@ -132,13 +133,6 @@ const routePaths = [
   'M300 300 C205 320 105 340 54 342',
   'M300 300 C215 245 135 180 102 144'
 ]
-
-function handlePointerMove(event: PointerEvent) {
-  if (event.pointerType === 'touch') return
-  const target = event.currentTarget as HTMLElement
-  target.style.setProperty('--auth-pointer-x', `${event.clientX}px`)
-  target.style.setProperty('--auth-pointer-y', `${event.clientY}px`)
-}
 
 function toggleTheme() {
   isDark.value = !isDark.value

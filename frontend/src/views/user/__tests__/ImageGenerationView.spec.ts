@@ -13,7 +13,17 @@ describe('ImageGenerationView integration contract', () => {
     expect(viewSource).toContain('submitImageGeneration')
     expect(viewSource).toContain("response_format: 'b64_json'")
     expect(viewSource).toContain('authStore.refreshUser()')
+    expect(viewSource).toContain('cancelGeneration')
     expect(viewSource).not.toContain('<iframe')
+  })
+
+  it('uses the full-height playground workspace and integrated composer', () => {
+    expect(viewSource).toContain('class="image-playground"')
+    expect(viewSource).toContain('class="image-playground-canvas"')
+    expect(viewSource).toContain('class="image-playground-composer"')
+    expect(viewSource).toContain('image-playground-parameters')
+    expect(viewSource).toContain('starterPromptKeys')
+    expect(viewSource).not.toContain('image-studio-hero')
   })
 
   it('is reachable from the authenticated router and sidebar', () => {

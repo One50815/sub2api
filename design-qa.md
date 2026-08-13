@@ -1,74 +1,77 @@
-# Sub2API Frontend Design QA
+# Homepage Design QA
 
-## Comparison Target
+## Scope
 
-- Source visual truth: `E:\最终版\前端`
-- Rendered implementation: `http://127.0.0.1:4173`
-- Desktop viewport: `1280x720`, dark and light themes
-- Mobile viewport: `390x844`, dark theme
-- States: login, register, forgot password, authenticated user API keys, authenticated admin users, empty tables
+- Homepage only: `frontend/src/views/HomeView.vue`, `frontend/src/styles/home-v2.css`, and landing-page locale copy.
+- Login, user console, admin backend, routes, APIs, authentication, billing, permissions, and theme infrastructure remain unchanged.
+- Existing `home_content` URL and HTML overrides remain supported.
 
-## Evidence
+## Design Read
 
-Full-view comparisons:
+- Product: public AI gateway homepage for everyday AI users and developers.
+- Direction: privacy-first, technically credible, restrained, and transparent about model choice and cost.
+- Reference language: warm neutral surface, dark floating navigation, strong typography, and layered product interaction inspired by CollectiveOS.
+- Dials: `DESIGN_VARIANCE 7`, `MOTION_INTENSITY 5`, `VISUAL_DENSITY 4`.
+- Foundation: existing Vue 3 application, native CSS, existing icon components, and existing theme tokens.
 
-- Login, dark desktop: `E:\最终版\sub2api\docs\design-qa\comparison-login-dark.png`
-- Admin users, dark desktop: `E:\最终版\sub2api\docs\design-qa\comparison-admin-users-dark.png`
+## Visual Truth
 
-Implementation views:
+- Reference URL: `https://collectiveos.vercel.app/#`
+- Source visual truth: `artifacts/design/collectiveos-reference-top-1280x720.png`
+- Primary implementation screenshot: `artifacts/design/omnio-home-desktop-light-1280x720.png`
+- Full-view comparison: `artifacts/design/homepage-reference-comparison-1280x720.png`
+- Focused hero comparison: `artifacts/design/homepage-reference-focused-comparison-1280x420.png`
+- Local implementation: `http://127.0.0.1:4173/home`
 
-- Register, dark desktop: `E:\最终版\sub2api\docs\design-qa\implementation-register-dark.png`
-- Forgot password, dark desktop: `E:\最终版\sub2api\docs\design-qa\implementation-forgot-password-dark.png`
-- Login, mobile: `E:\最终版\sub2api\docs\design-qa\implementation-login-mobile.png`
-- Admin users, mobile: `E:\最终版\sub2api\docs\design-qa\implementation-admin-users-mobile.png`
-- User API keys, light desktop: `E:\最终版\sub2api\docs\design-qa\implementation-user-keys-light.png`
-- User API keys, dark desktop: `E:\最终版\sub2api\docs\design-qa\implementation-user-keys-dark.png`
+## Viewports And States
 
-Focused region comparisons:
+- Chinese desktop light, `1280x720`: `artifacts/design/omnio-home-desktop-light-1280x720.png`
+- English desktop light, `1280x720`: `artifacts/design/omnio-home-desktop-en-light-1280x720.png`
+- English desktop dark, `1280x720`: `artifacts/design/omnio-home-desktop-dark-1280x720.png`
+- Chinese mobile light, `382x844`: `artifacts/design/omnio-home-mobile-light-382x844.png`
+- English mobile light, `382x844`: `artifacts/design/omnio-home-mobile-en-light-382x844.png`
+- English mobile dark, `382x844`: `artifacts/design/omnio-home-mobile-en-dark-382x844.png`
+- Mobile workflow: `artifacts/design/omnio-home-mobile-workflow-382x844.png`
+- Mobile FAQ and ending: `artifacts/design/omnio-home-mobile-faq-382x844.png`
 
-- Login form controls and card: `E:\最终版\sub2api\docs\design-qa\comparison-login-form-focused.png`
-- Admin heading, filters, actions, and table header: `E:\最终版\sub2api\docs\design-qa\comparison-admin-toolbar-focused.png`
+## Comparison Evidence
+
+The implementation intentionally borrows the reference's floating navigation, neutral palette, bold type, restrained radii, and first-viewport product signal. It does not clone the centered CollectiveOS composition or its business content. Omnio uses an asymmetric hero so the privacy, model, and cost proof can remain visible beside the headline.
+
+The focused comparison verifies headline scale, CTA hierarchy, line length, and proof-rail density. The full-view comparison verifies navigation proportion, first-viewport rhythm, and the visible handoff into the interactive task launcher.
 
 ## Findings
 
-- No actionable P0, P1, or P2 visual mismatches remain.
-- Fonts and typography: Public Sans, optical weights, line heights, non-negative letter spacing, heading hierarchy, wrapping, and compact UI labels follow the source. Mobile text remains inside its controls.
-- Spacing and layout rhythm: the 48px header, inset 192px sidebar, rounded main workspace, content padding, toolbar density, card geometry, table rhythm, and auth split composition match the source system. The 390px checks have no horizontal overflow.
-- Colors and visual tokens: charcoal dark surfaces, white light surfaces, blue primary actions, restrained borders, status colors, focus rings, shadows, and auth purple/blue/cyan lighting are consistently mapped across shared components.
-- Image quality and asset fidelity: the gateway background, brand mark, platform marks, and icons render sharply. Existing source assets and the repository icon system are used; there are no placeholder images or emoji substitutions.
-- Copy and content: authentication copy follows the reference tone while retaining Sub2API naming. Admin and user screens preserve Sub2API-specific fields, permissions, and routes where the reference product has different business content.
+- No actionable P0, P1, or P2 visual findings remain.
+- Typography: Public Sans keeps a consistent optical weight across Chinese and English. Hero copy remains two lines at desktop and two controlled lines at `382px` mobile.
+- Spacing: sections use distinct layout families, consistent vertical rhythm, and explicit single-column mobile collapse rules.
+- Color: one emerald accent is used across both themes. Light and dark modes preserve hierarchy without section-level theme flips.
+- Assets: existing product marks and model icons render sharply in both themes. No placeholder image or custom decorative SVG replacement was introduced.
+- Copy: privacy, exact model selection, request records, and cost transparency use one concrete product voice in both locales.
+- Responsiveness: document width remains within the viewport at `1280x720` and `382x844`. The task selector is intentionally horizontally scrollable on mobile without creating document-level overflow.
+- Interaction: task selection updates the launcher content; copy shows a visible success state; FAQ buttons expand and collapse with correct `aria-expanded`; mobile navigation opens and exposes all expected routes.
+- Accessibility: focus-visible states, semantic headings, navigation labels, reduced-motion handling, and practical mobile tap targets remain present.
 
-Expected product differences:
+## Patches Made
 
-- `Omnio` is replaced by the configured Sub2API site name and logo.
-- Reference-only navigation and New API fields are not copied. Sub2API routes, role checks, filters, columns, balance data, and API contracts remain authoritative.
-- Password reset, OAuth, agreement, Turnstile, and registration controls remain feature-gated by existing public settings.
+- Rebuilt the workflow, model directory, transparency evidence, FAQ, and final CTA with distinct layout families.
+- Rewrote Chinese and English copy around privacy, exact model selection, request traceability, and clear cost records.
+- Removed the earlier fallback language that conflicted with the no-hidden-substitution promise.
+- Tuned English and Chinese display type independently for desktop and mobile wrapping.
+- Preserved the current hero while improving the rest of the page's information rhythm.
+- Corrected the homepage language menu so normal, hover, and selected options retain readable contrast in light and dark modes.
+- Preserved homepage URL sanitization, public overrides, authentication behavior, and existing routes.
 
-## Patches Made Since Previous QA Pass
+## Verification
 
-- Moved page titles and primary actions into the content workspace.
-- Matched the reference 48px header, inset sidebar, rounded workspace, and compact navigation.
-- Centered wide-table empty states in the visible viewport.
-- Removed the duplicate empty-state create action on admin users.
-- Displayed role and status filters by default for first-time users.
-- Kept zero-result pagination visible and disabled correctly.
-- Tightened login typography and site-name-aware copy.
-- Added consistent light/dark/mobile handling across authentication, user, and admin views.
-
-## Implementation Checklist
-
-- [x] Desktop dark comparison
-- [x] Desktop light comparison
-- [x] Mobile responsive comparison
-- [x] Authentication pages
-- [x] User application shell and tables
-- [x] Admin application shell and tables
-- [x] Empty states and pagination
-- [x] Typography, spacing, colors, assets, and copy
-- [x] Lint, typecheck, tests, and production build
-
-## Follow-up Polish
-
-No blocking follow-up. Future upstream-only fields should be placed into the existing design system instead of restoring legacy Vue styling.
+- Targeted ESLint: passed.
+- Locale compile and collision tests: 8 passed.
+- Production build: passed, 1026 modules transformed.
+- Desktop and mobile visual checks: passed.
+- Chinese and English layout checks: passed.
+- Light and dark theme checks: passed.
+- Task launcher, copy feedback, FAQ, and mobile navigation checks: passed.
+- Page copy contains no em dash or en dash characters.
+- Build warnings are existing project warnings for Browserslist age, mixed dynamic/static imports, chunk size, and a Node child-process deprecation.
 
 final result: passed

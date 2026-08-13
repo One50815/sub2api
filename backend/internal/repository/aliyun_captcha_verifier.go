@@ -18,6 +18,7 @@ const aliyunCaptchaTimeoutMillis = 10_000
 type aliyunCaptchaVerifier struct {
 	protocol      string // "HTTPS"；测试注入 "HTTP" 指向 httptest.Server
 	timeoutMillis int
+	noProxy       string
 }
 
 func NewAliyunCaptchaVerifier() service.AliyunCaptchaVerifier {
@@ -30,14 +31,18 @@ func NewAliyunCaptchaVerifier() service.AliyunCaptchaVerifier {
 // VerifyCaptcha 调用阿里云验证码 2.0 VerifyIntelligentCaptcha。
 // AK/SK 是可热更的后台设置，每次调用按当前凭证新建 client。
 func (v *aliyunCaptchaVerifier) VerifyCaptcha(ctx context.Context, cred service.AliyunCaptchaCredentials, captchaVerifyParam string) (*service.AliyunCaptchaVerifyResult, error) {
-	client, err := captcha.NewClient(&openapiutil.Config{
+	clientConfig := &openapiutil.Config{
 		AccessKeyId:     dara.String(cred.AccessKeyID),
 		AccessKeySecret: dara.String(cred.AccessKeySecret),
 		Endpoint:        dara.String(cred.Endpoint),
 		Protocol:        dara.String(v.protocol),
 		ConnectTimeout:  dara.Int(v.timeoutMillis),
 		ReadTimeout:     dara.Int(v.timeoutMillis),
-	})
+	}
+	if v.noProxy != "" {
+		clientConfig.NoProxy = dara.String(v.noProxy)
+	}
+	client, err := captcha.NewClient(clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("create aliyun captcha client: %w", err)
 	}
